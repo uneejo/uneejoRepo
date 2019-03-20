@@ -15,6 +15,6 @@ class A {
 
 System.out.println(school1.name);
 System.out.println(school2.name);
-
+System.out.println("dddd");
 }
 }
