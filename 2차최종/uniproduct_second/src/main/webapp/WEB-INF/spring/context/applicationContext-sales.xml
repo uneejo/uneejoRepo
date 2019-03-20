@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+
+<bean id="contractDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.ContractDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+<bean id="contractDetailDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.ContractDetailDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+<bean id="deliveryResultDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.DeliveryResultDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+<bean id="estimateDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.EstimateDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+<bean id="estimateDetailDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.EstimateDetailDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+<bean id="salesPlanDAOImpl" 
+class="com.project.uniproduct.logistics.sales.dao.SalesPlanDAOImpl">
+<property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+</bean>
+
+
+<bean id="contractApplicationServiceImpl" 
+class="com.project.uniproduct.logistics.sales.applicationService.ContractApplicationServiceImpl">
+<property name="contractDAO" ref="contractDAOImpl" />
+<property name="contractDetailDAO" ref="contractDetailDAOImpl" />
+<property name="estimateDAO" ref="estimateDAOImpl" />
+</bean>
+
+<bean id="deliveryApplicationServiceImpl" 
+class="com.project.uniproduct.logistics.sales.applicationService.DeliveryApplicationServiceImpl">
+</bean>
+
+<bean id="estimateApplicationServiceImpl" 
+class="com.project.uniproduct.logistics.sales.applicationService.EstimateApplicationServiceImpl">
+<property name="estimateDAO" ref="estimateDAOImpl" />
+<property name="estimateDetailDAO" ref="estimateDetailDAOImpl" />
+</bean>
+
+<bean id="salesPlanApplicationServiceImpl" 
+class="com.project.uniproduct.logistics.sales.applicationService.SalesPlanApplicationServiceImpl">
+<property name="salesPlanDAO" ref="salesPlanDAOImpl" />
+</bean>
+
+
+
+<bean id="salesServiceFacadeImpl" 
+class="com.project.uniproduct.logistics.sales.serviceFacade.SalesServiceFacadeImpl">
+<property name="estimateAS" ref="estimateApplicationServiceImpl" />
+<property name="contractAS" ref="contractApplicationServiceImpl" />
+<property name="salesPlanAS" ref="salesPlanApplicationServiceImpl" />
+</bean>
+
+</beans>

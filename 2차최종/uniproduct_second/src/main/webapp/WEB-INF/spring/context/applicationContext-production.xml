@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+	<bean id="mpsDAOImpl"
+		class="com.project.uniproduct.logistics.production.dao.MpsDAOImpl">
+		<property name="dataSourceTransactionManager"
+			ref="dataSourceTransactionManager" />
+	</bean>
+	
+
+	<bean id="mrpDAOImpl"
+		class="com.project.uniproduct.logistics.production.dao.MrpDAOImpl">
+		<property name="dataSourceTransactionManager"
+			ref="dataSourceTransactionManager" />
+	</bean>
+
+
+	<bean id="mrpGatheringDAOImpl"
+		class="com.project.uniproduct.logistics.production.dao.MrpGatheringDAOImpl">
+		<property name="dataSourceTransactionManager"
+			ref="dataSourceTransactionManager" />
+	</bean>
+
+
+
+	<bean id="mpsApplicationServiceImpl"
+		class="com.project.uniproduct.logistics.production.applicationService.MpsApplicationServiceImpl">
+		<property name="mpsDAO" ref="mpsDAOImpl" />
+		<property name="contractDetailDAO"
+			ref="contractDetailDAOImpl" />
+		<property name="salesPlanDAO" ref="salesPlanDAOImpl" />
+	</bean>
+
+	<bean id="mrpApplicationServiceImpl"
+		class="com.project.uniproduct.logistics.production.applicationService.MrpApplicationServiceImpl">
+		<property name="mpsDAO" ref="mpsDAOImpl" />
+		<property name="mrpDAO" ref="mrpDAOImpl" />
+		<property name="mrpGatheringDAO" ref="mrpGatheringDAOImpl" />
+	</bean>
+
+	<bean id="productionServiceFacadeImpl"
+		class="com.project.uniproduct.logistics.production.serviceFacade.ProductionServiceFacadeImpl">
+		<property name="mpsAS" ref="mpsApplicationServiceImpl" />
+		<property name="mrpAS" ref="mrpApplicationServiceImpl" />
+	</bean>
+
+</beans>

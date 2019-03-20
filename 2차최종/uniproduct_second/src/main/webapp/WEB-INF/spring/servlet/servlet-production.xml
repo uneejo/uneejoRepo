@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+		
+		<bean id="productionUrlHandlerMapping"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="order" value="1" />
+		<property name="alwaysUseFullPath" value="false" />
+		<property name="mappings">
+			<props>
+             <prop key="/searchMpsInfo.do">mpsController</prop>
+             <prop key="/searchContractDetailInMpsAvailable.do">mpsController</prop>
+             <prop key="/searchSalesPlanInMpsAvailable.do">mpsController</prop>
+             <prop key="/convertContractDetailToMps.do">mpsController</prop>
+             <prop key="/convertSalesPlanToMps.do">mpsController</prop>
+             
+             <prop key="/getMrpList.do">mrpController</prop>
+             <prop key="/openMrp.do">mrpController</prop>
+             <prop key="/registerMrp.do">mrpController</prop>
+             <prop key="/getMrpGatheringList.do">mrpController</prop>
+             <prop key="/registerMrpGathering.do">mrpController</prop>
+             <prop key="/searchMrpGathering.do">mrpController</prop>
+             
+             <prop key="/mpsRegister.html">urlFilenameViewController</prop>
+             <prop key="/mrpRegisterAndGather.html">urlFilenameViewController</prop>
+             <prop key="/mrpInfo.html">urlFilenameViewController</prop>
+             <prop key="/workInstruction.html">urlFilenameViewController</prop>
+             <prop key="/manufactureManagement.html">urlFilenameViewController</prop>
+    
+			</props>
+		</property>
+	</bean>
+
+
+	<bean id="productionViewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/production/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+		
+		
+		<bean id="mpsController" class="com.project.uniproduct.logistics.production.controller.MpsController" 
+			p:cacheSeconds="0" >
+		<property name="productionSF" ref="productionServiceFacadeImpl" />
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+
+	<bean id="mrpController" class="com.project.uniproduct.logistics.production.controller.MrpController" 
+			p:cacheSeconds="0" >
+		<property name="productionSF" ref="productionServiceFacadeImpl" />
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+		
+
+		</beans>

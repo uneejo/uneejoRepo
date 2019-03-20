@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+
+<bean id="employeeBasicDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmployeeBasicDAOImpl">
+  <property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+			</bean>
+
+<bean id="employeeDetailDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmployeeDetailDAOImpl">
+  <property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+			</bean>
+			
+<bean id="employeeSecretDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmployeeSecretDAOImpl">
+  <property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+			</bean>
+			
+<bean id="empSearchingDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmpSearchingDAOImpl">
+  <property name="dataSourceTransactionManager" ref="dataSourceTransactionManager" />
+			</bean>
+
+<bean id="empApplicationServiceImpl"
+  class="com.project.uniproduct.hr.applicationService.EmpApplicationServiceImpl">
+  <property name="empBasicDAO" ref="employeeBasicDAOImpl" />
+  <property name="empDetailDAO" ref="employeeDetailDAOImpl" />
+  <property name="empSecretDAO" ref="employeeSecretDAOImpl" />
+  <property name="empSearchDAO" ref="empSearchingDAOImpl" />
+  <property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+			</bean>
+
+<bean id="hrServiceFacadeImpl"
+  class="com.project.uniproduct.hr.serviceFacade.HrServiceFacadeImpl">
+  <property name="empAS" ref="empApplicationServiceImpl" />
+			</bean>
+
+</beans>
