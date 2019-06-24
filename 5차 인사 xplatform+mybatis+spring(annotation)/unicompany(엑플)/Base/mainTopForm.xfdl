@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<FDL version="1.5">
+  <TypeDefinition url="..\default_typedef.xml"/>
+  <Form id="mainTopForm" classname="mainTopForm" inheritanceid="" position="absolute 0 0 1300 150" titletext="New Form" onload="mainTopForm_onload" style="background:lavender;" ontimer="setText">
+    <Layouts>
+      <Layout>
+        <Static id="Static06" position2="absolute l:11 w:316 t:24 h:89" positiontype="position2" style="background:lightslategray;opacity:70;" onclick="Static06_onclick"/>
+        <Static id="Static00" text="권한" position2="absolute l:340 w:68 t:25 h:31" positiontype="position2" style="background:cornflowerblue;color:ghostwhite;align:middle;font:Verdana,11,bold;"/>
+        <Static id="Static01" text="부서" position2="absolute l:560 w:68 t:81 h:31" positiontype="position2" style="background:cornflowerblue;color:ghostwhite;align:middle;font:Verdana,11,bold;"/>
+        <Static id="Static02" text="사원번호" position2="absolute l:768 w:68 t:25 h:31" positiontype="position2" style="background:cornflowerblue;color:ghostwhite;align:middle;font:Verdana,11,bold;"/>
+        <Static id="Static03" text="사원명" position2="absolute l:770 w:68 t:80 h:31" positiontype="position2" style="background:cornflowerblue;color:ghostwhite;align:middle;font:Verdana,11,bold;"/>
+        <Static id="Static04" text="사업장" position2="absolute l:560 w:68 t:26 h:31" positiontype="position2" style="background:cornflowerblue;color:ghostwhite;align:middle;font:Verdana,11,bold;"/>
+        <Edit id="authorityCode" taborder="1" position2="absolute l:413 w:120 t:24 h:34" positiontype="position2" enable="false"/>
+        <Edit id="businessCode" taborder="2" position2="absolute l:636 w:120 t:26 h:34" positiontype="position2" enable="false"/>
+        <Edit id="deptCode" taborder="3" position2="absolute l:636 w:120 t:77 h:34" positiontype="position2" enable="false"/>
+        <Edit id="empCode" taborder="4" position2="absolute l:845 w:120 t:25 h:34" positiontype="position2" enable="false"/>
+        <Edit id="empName" taborder="5" position2="absolute l:846 w:120 t:76 h:34" positiontype="position2" enable="false"/>
+        <Button id="logoutBtn" taborder="6" text="로그아웃" position2="absolute l:986 w:129 t:47 h:36" positiontype="position2" style="background:cornflowerblue;color:floralwhite;" onclick="logoutBtn_onclick"/>
+        <Button id="goMainBtn" taborder="7" text="메인화면" position2="absolute l:1143 w:129 t:47 h:36" positiontype="position2" style="background:cornflowerblue;color:floralwhite;" onclick="goMainBtn_onclick"/>
+        <Static id="stationName" position2="absolute l:40 w:73 t:74 h:26" positiontype="position2" style="background:transparent;color:black;font:굴림,10,bold;"/>
+        <Static id="pmGrade" position2="absolute l:136 w:73 t:74 h:26" positiontype="position2" style="background:transparent;color:black;font:굴림,10,bold;" onclick="pmGrade_onclick"/>
+        <Static id="pmValue" position2="absolute l:235 w:57 t:74 h:26" positiontype="position2" style="background:transparent;color:black;font:굴림,10,bold;"/>
+        <Static id="Static05" text="경남측정소 기준 오늘의 미세먼지" position2="absolute l:26 w:282 t:30 h:31" positiontype="position2" style="background:transparent;color:white;font:함초롬돋움 확장,12,bold;"/>
+      </Layout>
+    </Layouts>
+    <Bind/>
+    <Script type="xscript4.0"><![CDATA[
+function mainTopForm_onload(obj:Form, e:LoadEventInfo)
+{   
+	today=new Date().toFormatString("%Y%m%d");	
+	g_today=today;
+	
+
+	
+		transaction("getDustValue",
+		            "svcBase::getDustValue.do",
+		            "",
+		            "gds_dust=gds_dust",
+		            "",
+		            "callback",
+		            false);
+   
+	setTimer(setText(),2000);  
+	 
+
+}
+
+var num=null;
+function setText(){
+     num++;
+     
+     if(num==null){
+          num=0;
+     }else if(num<gds_dust.getRowCount()){
+        stationName.text=gds_dust.getColumn(num-1,"STATION_NAME");
+      
+        pmValue.text=gds_dust.getColumn(num-1,"PM_VALUE");
+      
+        if(gds_dust.getColumn(num-1,"PM_GRADE")==1){pmGrade.text="좋음"; pmGrade.color="white";}
+        else if(gds_dust.getColumn(num-1,"PM_GRADE")==2){pmGrade.text="보통"; pmGrade.color="black";}
+        else if(gds_dust.getColumn(num-1,"PM_GRADE")==3){pmGrade.text="나쁨"; pmGrade.color="blue";}
+        else if(gds_dust.getColumn(num-1,"PM_GRADE")==4){pmGrade.text="매우나쁨"; pmGrade.color="red";}
+        
+      }
+      else{
+        num=0;
+      }
+
+}
+
+
+
+function logoutBtn_onclick(obj:Button,  e:ClickEventInfo)
+{     application.mainframe.visible = false;
+	openLoginFormDialog("loginform","LoginForm","Base::loginForm.xfdl");
+}
+
+
+function goMainBtn_onclick(obj:Button,  e:ClickEventInfo)
+{
+	gfn_Open("mainView", "Base::mainView.xfdl", "메인화면")
+}
+]]></Script>
+  </Form>
+</FDL>

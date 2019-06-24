@@ -1,0 +1,46 @@
+import java.awt.*;
+import java.awt.event.*;
+class A extends Frame{
+	Button b;
+	A(){
+		b=new Button("다이얼로그띄우기");
+		setLayout(new FlowLayout());
+		add(b);
+		b.addActionListener(new ActionHandler(this));
+	}
+}
+class B extends Dialog{
+	Button b;
+	B(A f){
+		super(f); 
+		b=new Button("닫기");
+		setLayout(new FlowLayout());
+		add(b);
+		b.addActionListener(new ActionHandler());
+	}
+}
+class ActionHandler implements ActionListener{
+	A f;
+	ActionHandler(A f){this.f=f;}
+	ActionHandler(){}
+	
+	public void actionPerformed(ActionEvent e){
+		Object o=e.getSource();
+		if(((Button)o).getLabel().equals("다이얼로그띄우기")){
+			B d=new B(f);
+			d.setBounds(300,300,200,100);
+			d.setVisible(true);
+		}else {
+			Container c=((Button)o).getParent();
+			c.setVisible(false);
+		}
+	}
+}
+class C{
+	public static void main(String args[]){
+		A f=new A();
+		f.setBounds(200,200,200,200);
+		f.setVisible(true);
+	}
+}
+

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQLMap 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="department">
+
+<typeAlias alias="departmentTO" type="com.project.uniproduct.basicInfo.to.DepartmentTO"/>
+
+<resultMap id="departmentResult" class="departmentTO">
+    <result property="workplaceCode" column="WORKPLACE_CODE" />
+	<result property="deptCode" column="DEPT_CODE" />
+	<result property="deptName" column="DEPT_NAME" />
+	<result property="workplaceName" column="WORKPLACE_NAME" />
+	<result property="companyCode" column="COMPANY_CODE" />
+	<result property="deptStartDate" column="DEPT_START_DATE" />
+	<result property="deptEndDate" column="DEPT_END_DATE" />	
+
+</resultMap>
+
+<select id="selectDepartmentListByCompany" resultMap="departmentResult" parameterClass="string">
+SELECT * FROM DEPARTMENT WHERE COMPANY_CODE = #companyCode:VARCHAR#
+</select>
+
+<select id="selectDepartmentListByWorkplace" resultMap="departmentResult" parameterClass="string">
+SELECT * FROM DEPARTMENT WHERE WORKPLACE_CODE = #workplaceCode:VARCHAR#
+</select>
+
+<insert id="insertDepartment" parameterClass="departmentTO">
+Insert into DEPARTMENT  
+					( WORKPLACE_CODE , DEPT_CODE , DEPT_NAME ,
+					  WORKPLACE_NAME , COMPANY_CODE , 
+					  DEPT_START_DATE , DEPT_END_DATE )
+					values
+                   ( #workplaceCode:VARCHAR# , #deptCode:VARCHAR# , #deptName:NVARCHAR# , 
+	                 #workplaceName:NVARCHAR# , #companyCode:VARCHAR# , #deptStartDate:VARCHAR# , 
+		             #deptEndDate:VARCHAR# )
+</insert>
+
+<update id="updateDepartment" parameterClass="departmentTO">
+UPDATE DEPARTMENT SET 
+		DEPT_NAME = #deptName:NVARCHAR# , 
+		WORKPLACE_NAME = #workplaceName:NVARCHAR# , 
+		COMPANY_CODE = #companyCode:VARCHAR# ,
+		DEPT_START_DATE = #deptStartDate:VARCHAR# , 
+		DEPT_END_DATE = #deptEndDate:VARCHAR# 
+		WHERE WORKPLACE_CODE = #workplaceCode:VARCHAR# 
+		AND DEPT_CODE = #deptCode:VARCHAR#
+</update>
+
+<delete id="deleteDepartment" parameterClass="departmentTO">
+DELETE FROM DEPARTMENT WHERE WORKPLACE_CODE = #workplaceCode:VARCHAR# AND DEPT_CODE =  #deptCode:VARCHAR#
+</delete>
+
+</sqlMap>

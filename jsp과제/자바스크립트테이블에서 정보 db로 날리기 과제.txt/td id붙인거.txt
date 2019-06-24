@@ -1,0 +1,158 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+<style type="text/css"> 
+#container td { 
+border:1px solid navy; width:100px;
+text-align:center; 
+}
+</style>
+<script src="https://code.jquery.com/jquery-1.10.2.js">
+</script>
+<script>
+$(document).ready(function(){
+initTable();
+$("#addButton").click(addFunc);
+$("#updateButton").click(updateFunc);
+});
+
+function initTable(){
+var colArray=["ID","PW","ADDR","TEL"];
+var trObj=$("<tr/>");
+trObj.appendTo("#container");
+$.each(colArray,function(index,name){
+$("<td/>",{"html":name}).appendTo(trObj);
+}); 
+}
+
+var num=0;
+function addFunc(){
+	num++;
+eval("var trObj=$('<tr id=t"+num+"/>')");
+trObj.appendTo("#container");
+for(var col=0; col<4; col++){
+eval("var tdObj=$('<td id=t"+num+"-"+col+"/>')");
+tdObj.append(
+$("<input type=text />").css({"width":"100px"})
+).appendTo(trObj).keypress(function(e){
+if(e.keyCode==13){
+	$(this).html($($(this).children()[0]).val());
+	$($(this).children()[0]).remove();
+	$($(this).next().children()[0]).focus();
+}
+});
+}
+
+}
+
+function updateFunc(){
+		
+}
+
+</script>
+</head>
+<body>
+<input type="button" value="추가" id="addButton">
+<input type="button" value="업데이트" id="updateButton"><br/>
+<table id="container"></table>
+</body>
+</html>
+
+
+
+
+
+
+mygrid 구현
+==================================
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+<style type="text/css"> 
+#container td { 
+border:1px solid navy; width:100px;
+text-align:center; 
+}
+</style>
+<script src="https://code.jquery.com/jquery-1.10.2.js">
+</script>
+<script>
+$(document).ready(function(){
+initTable();
+$("#addButton").click(addFunc);
+$("#updateButton").click(updateFunc);
+});
+
+function initTable(){
+var colArray=["ID","PW","ADDR","TEL"];
+var trObj=$("<tr/>");
+trObj.appendTo("#container");
+$.each(colArray,function(index,name){
+$("<td/>",{"html":name}).appendTo(trObj);
+}); 
+}
+
+var num=0;
+function addFunc(){
+	num++;
+eval("var trObj=$('<tr id=t"+num+"/>')");
+trObj.appendTo("#container");
+for(var col=0; col<4; col++){
+eval("var tdObj=$('<td id=t"+num+"-"+col+"/>')");
+tdObj.append(
+$("<input type=text />").css({"width":"100px"})
+).appendTo(trObj).keypress(function(e){
+if(e.keyCode==13){
+	$(this).html($($(this).children()[0]).val());
+	$($(this).children()[0]).remove();
+	$($(this).next().children()[0]).focus();
+}
+});
+}
+
+}
+
+function MyGrid(){
+	
+	this.getrow=function(rownum){
+		var n=rownum;
+		var str="";
+		for(a=0; a<4; a++){
+		str+=eval("$('#t"+n+"-"+a+"').text()")+"/"
+		
+		}
+		
+		var title=["id","pw","addr","tel"];
+		var obj={};
+		var array=str.split("/");
+		for(b=0; b<4; b++){
+			obj[""+title[b]+""]=array[b];			
+		}
+		return obj; 
+	}	
+}
+
+function updateFunc(){
+			
+	var mygrid=new MyGrid()
+	var oo=mygrid.getrow(1);
+	alert(oo);
+}
+
+
+</script>
+</head>
+<body>
+<input type="button" value="추가" id="addButton">
+<input type="button" value="업데이트" id="updateButton"><br/>
+<table id="container"></table>
+</body>
+</html>

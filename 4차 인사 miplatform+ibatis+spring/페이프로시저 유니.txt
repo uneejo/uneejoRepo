@@ -1,0 +1,440 @@
+ CREATE OR REPLACE PACKAGE BODY "P_HR_PAY" AS
+
+PROCEDURE P_CALC_PAY(
+          p_payment_date IN VARCHAR2, --지급일자
+          p_standard_date IN VARCHAR2,
+          p_error_code OUT VARCHAR2,
+          p_error_msg OUT VARCHAR2
+)
+IS
+           
+--*********************************************************************************
+--MONTH_ATTD_MGT 테이블 에서 가져올것
+--*********************************************************************************
+                v_close_yn VARCHAR2(100);
+
+                v_basic_work_hour VARCHAR2(100);
+                v_work_hour VARCHAR2(100);
+                v_over_work_hour VARCHAR2(100);
+                v_night_work_hour VARCHAR2(100);
+                v_basic_work_days VARCHAR2(100);
+                v_weekday_work VARCHAR2(100);
+                v_holiday_work_days VARCHAR2(100);
+                v_holiday_work_hour VARCHAR2(100);
+                v_holiday_over_work_hour VARCHAR2(100);
+                v_holiday_night_work_hour VARCHAR2(100);
+                v_absent_days VARCHAR2(100);
+                v_late_days VARCHAR2(100);
+                v_late_hour VARCHAR2(100);
+                v_leave_early_days VARCHAR2(100);
+                v_leave_days VARCHAR2(100);
+                v_attd_rest_days VARCHAR2(100);  
+
+--********************************************************************************
+--hobong 테이블 에서 가져온 것
+--*********************************************************************************
+
+v_base_sal VARCHAR2(100);
+v_bonus VARCHAR2(100);
+v_sigub VARCHAR2(100);
+
+--*********************************************************************************
+--DEDUCTIONS_TAX_MGT 테이블 에서 가져올것
+--*********************************************************************************
+v_national_pen_rate VARCHAR2(100);
+v_long_term_care_rate VARCHAR2(100);
+v_health_insur_rate VARCHAR2(100);
+v_employeement_insur_rate VARCHAR2(100);
+--*********************************************************************************
+--INCOME_TAX_MGT 테이블 에서 가져올것
+--*********************************************************************************
+  v_income_tax_rate VARCHAR2(100);
+  v_local_income_tax_rate VARCHAR2(100);
+--*********************************************************************************
+--PAY_DEDUCTION 테이블에 담을 변수
+--*********************************************************************************
+  v_pay_deduction_seq VARCHAR2(100);
+  v_emp_code VARCHAR2(100);
+  v_payment_date VARCHAR2(100);
+  v_price VARCHAR2(100);
+  v_pay_deduction_item_code VARCHAR2(100);
+  v_pay_deduction_item_name VARCHAR2(100);
+  
+--*********************************************************************************
+--총 소득액(세금 때기 전) 변수 and 계산값 변수
+--*********************************************************************************
+  v_total_income_price VARCHAR2(100);
+  
+  v_national_insurance_price VARCHAR2(100); --국민연금보험액
+  v_health_insurance_price VARCHAR2(100); --건강보험액
+  v_employeement_insurance_price VARCHAR2(100); --고용보험액
+  v_income_tax VARCHAR2(100); --소득세
+  v_long_term_care_price VARCHAR2(100); --장기요양보험액
+  v_local_income_tax VARCHAR2(100); --지방소득세
+--*********************************************************************************
+--SAL_INPUT 테이블에 담을 변수
+--*********************************************************************************
+  v_hire_date VARCHAR2(100); --work_info 테이블에서 가져옴
+  v_retire_date VARCHAR2(100); --work_info 테이블에서 가져옴
+  v_total_salary VARCHAR2(100);
+  v_total_deduction_price VARCHAR2(100);
+  v_chine_payments VARCHAR2(100);
+--*********************************************************************************
+--SAL_INFO테이블에서 가져온것
+--*********************************************************************************
+    v_sal_info_hobong VARCHAR2(100);
+  --v_hobong VARCHAR2(100);
+
+
+
+BEGIN
+SAVEPOINT SP1;
+    BEGIN
+     SELECT DISTINCT(CLOSE_YN) 
+      INTO v_close_yn
+      FROM MONTH_ATTD_MGT
+      WHERE BASIC_YEAR_MONTH = p_standard_date;  
+     END;     
+  
+   IF v_close_yn ='N' THEN
+       p_error_code := '-1';
+       p_error_msg := '해당월근태가 마감되지 않았습니다.';
+       RETURN;
+   ELSE     --해당 귀속년월이 마감되었을 경우
+      SEQUENCE_RESET ('PAY_DEDUCTION_SEQ');         --시퀀스 초기화 :: 급여계산시 다시 데이터를 생성하기 때문에 시퀀스를 리셋시킨다
+
+      BEGIN
+       --PAY_DEDUCTION_MGT테이블에 등록된 지급/공제항목을 넣기위해 PAY_DEDUCTION테이블안의 데이터를 삭제한다.
+      DELETE FROM PAY_DEDUCTION;
+         EXCEPTION
+               WHEN OTHERS THEN
+                     p_error_code:='-1';
+                     p_error_msg:='지급공제 데이터 삭제실패';
+                  ROLLBACK TO SP1;
+                  RETURN;
+      END;
+
+         --SAL_INPUT테이블에 해당지급일의 데이터를 삭제한다.
+      BEGIN
+            DELETE FROM SAL_INPUT
+            WHERE PAYMENT_DATE=p_payment_date;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    p_error_code:='-1';
+                    p_error_msg:='상용직급여 데이터 삭제실패';
+                     ROLLBACK TO SP1;
+                    RETURN;
+      END;  
+      
+
+      
+      
+      
+  -------------------------------------------------------------------
+  FOR C_EMPLOYEE IN(SELECT * FROM EMPLOYEE) LOOP
+          
+          
+           FOR C_MONTH_ATTD_MGT IN(SELECT * FROM MONTH_ATTD_MGT)
+           LOOP
+          SELECT BASIC_WORK_HOUR 
+                 ,WORK_HOUR
+                 ,OVER_WORK_HOUR 
+                 ,NIGHT_WORK_HOUR
+                 ,BASIC_WORK_DAYS 
+                 ,WEEKDAY_WORK 
+                 ,HOLIDAY_WORK_DAYS
+                 ,HOLIDAY_WORK_HOUR
+                 ,HOLIDAY_OVER_WORK_HOUR
+                 ,HOLIDAY_NIGHT_WORK_HOUR
+                 ,ABSENT_DAYS
+                 ,LATE_DAYS
+                 ,LATE_HOUR
+                 ,LEAVE_EARLY_DAYS
+                 ,LEAVE_DAYS
+                 ,ATTD_REST_DAYS  
+         INTO     
+                 v_basic_work_hour
+                 ,v_work_hour
+                 ,v_over_work_hour 
+                 ,v_night_work_hour
+                 ,v_basic_work_days 
+                 ,v_weekday_work 
+                 ,v_holiday_work_days
+                 ,v_holiday_work_hour
+                 ,v_holiday_over_work_hour
+                 ,v_holiday_night_work_hour
+                 ,v_absent_days
+                 ,v_late_days
+                 ,v_late_hour
+                 ,v_leave_early_days
+                 ,v_leave_days
+                 ,v_attd_rest_days       
+      FROM MONTH_ATTD_MGT 
+      WHERE EMP_CODE=C_EMPLOYEE.EMP_CODE 
+       AND BASIC_YEAR_MONTH=p_standard_date;
+           END LOOP; --월근태마감 종료
+           
+        
+          SELECT HOBONG
+          INTO v_sal_info_hobong
+          FROM SAL_INFO
+          WHERE EMP_CODE=C_EMPLOYEE.EMP_CODE;
+       
+        --DBMS_OUTPUT.PUT_LINE(C_EMPLOYEE.EMP_CODE);
+          SELECT BASE_SAL
+                ,BONUS
+                ,SIGUB
+          INTO 
+               v_base_sal
+              ,v_bonus
+              ,v_sigub
+          FROM HOBONG
+          WHERE HOBONG=v_sal_info_hobong
+          AND POSITION_CODE=C_EMPLOYEE.POSITION_CODE;
+        
+        
+           
+           FOR C_PAY_DEDUCTION_MGT IN(
+           SELECT * FROM PAY_DEDUCTION_MGT
+            )LOOP
+           IF C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_TYPE_CODE ='PDC001' THEN --지급일때
+               IF C_PAY_DEDUCTION_MGT.TAX_TYPE_CODE='PTC001' THEN --과세일때
+                     CASE WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-10'THEN --기본급일때
+                              v_price := v_base_sal;
+                         WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-20' THEN -- 연장근무수당일때(평일인경우만)
+                              v_price :=  v_over_work_hour * v_sigub * F_SUDANG('OVS001');
+                          WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-30' THEN --휴일근무수당(휴일기본근무,휴일연장근무,휴일야간근무 합친값)
+                              v_price := ( v_holiday_work_hour * v_sigub * F_SUDANG('SA001'))
+                                       + ( v_holiday_over_work_hour * v_sigub * F_SUDANG('HOVS001'))
+                                       + ( v_holiday_night_work_hour * v_sigub * F_SUDANG('HOVS002'));   
+                          WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-40' THEN --야간근무수당
+                              v_price :=  v_night_work_hour * v_sigub * F_SUDANG('OVS002');
+                          ELSE
+                              DBMS_OUTPUT.PUT_LINE('N FOUND DATA');
+                          END CASE;
+ 
+               ELSE --비과세일때
+            
+                CASE WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-50' THEN --식비
+                     v_price:= F_PAY_NO_TAX(C_EMPLOYEE.EMP_CODE,p_standard_date,'ETS004'); --식비
+                   
+                  WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-60' THEN --유류비
+                     v_price:= F_PAY_NO_TAX(C_EMPLOYEE.EMP_CODE,p_standard_date,'ETS002');--유류비
+   
+                  WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-90' THEN --출장수당
+                    
+                     v_price:= F_PAY_NO_TAX(C_EMPLOYEE.EMP_CODE,p_standard_date,'ETS001'); --출장수당
+                 
+                  WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-100' THEN --자기계발지원금
+                     v_price:= F_PAY_NO_TAX(C_EMPLOYEE.EMP_CODE,p_standard_date,'ETS003'); --자기계발지원금
+             
+                  WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-110' THEN
+                     v_price:=0;
+                  ELSE
+                     DBMS_OUTPUT.PUT_LINE('T FOUND DATA');
+                 END CASE;
+                    
+               END IF;--과세일때,비과세일때 종료 IF
+           ELSE --공제일때
+                v_price:=0;
+                CASE WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-120'THEN
+                      SELECT NATIONAL_PEN_RATE INTO v_national_pen_rate FROM DEDUCTIONS_TAX_MGT WHERE INPUTED_YEAR = (SELECT SUBSTR(p_standard_date,0,4) FROM dual);                     
+                WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-130' THEN
+                      SELECT LONG_TERM_CARE_RATE INTO v_long_term_care_rate FROM DEDUCTIONS_TAX_MGT WHERE INPUTED_YEAR = (SELECT SUBSTR(p_standard_date,0,4) FROM dual);
+                WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-140' THEN
+                    SELECT HEALTH_INSUR_RATE INTO v_health_insur_rate FROM DEDUCTIONS_TAX_MGT WHERE INPUTED_YEAR = (SELECT SUBSTR(p_standard_date,0,4) FROM dual);
+                WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-150' THEN
+                    SELECT EMPLOYEEMENT_INSUR_RATE INTO v_employeement_insur_rate FROM DEDUCTIONS_TAX_MGT WHERE INPUTED_YEAR = (SELECT SUBSTR(p_standard_date,0,4) FROM dual);
+                WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-160' THEN
+                   v_income_tax_rate:=3.3;
+                WHEN C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE='P-170' THEN
+                   v_local_income_tax_rate := 10;
+                ELSE
+                   DBMS_OUTPUT.PUT_LINE('NOT FOUND DATA');
+                END CASE;
+           
+           END IF; --지급일때 공제일때 종료 IF
+     
+    -------------------------------------------------
+      --공통부분 pay_deduction테이블에 넣기
+    
+        SELECT PAY_DEDUCTION_SEQ.NEXTVAL INTO v_pay_deduction_seq FROM dual;
+            
+             INSERT INTO PAY_DEDUCTION(
+                      PAY_DEDUCTION_SEQ,
+                      PAY_DEDUCTION_ITEM_CODE,
+                      PAY_DEDUCTION_ITEM_NAME,
+                      PRICE,
+                      EMP_CODE,
+                      PAYMENT_DATE
+                  )VALUES(
+                      v_pay_deduction_seq,
+                      C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_CODE,
+                      C_PAY_DEDUCTION_MGT.PAY_DEDUCTION_ITEM_NAME,
+                      ROUND(v_price,-2),
+                      C_EMPLOYEE.EMP_CODE,
+                      p_payment_date
+                  );
+     
+    ----------------------------------------------------   
+           
+            END LOOP; --PAY DEDUCTION종료
+  
+     
+     -------------------------------------pay_deduction 다시 계산해서 넣기
+           SELECT SUM(PD.PRICE) 
+         INTO v_total_income_price 
+         FROM PAY_DEDUCTION PD , PAY_DEDUCTION_MGT PDM
+         WHERE PD.PAY_DEDUCTION_ITEM_CODE=PDM.PAY_DEDUCTION_ITEM_CODE
+         AND PDM.PAY_DEDUCTION_TYPE_CODE='PDC001' --지급
+         AND PDM.TAX_TYPE_CODE='PTC001' --과세
+         AND EMP_CODE= C_EMPLOYEE.EMP_CODE;
+         
+
+         FOR C_PAY_DEDUCTION_UPDATE_FIRST IN(
+          SELECT * 
+          FROM PAY_DEDUCTION
+          WHERE PAY_DEDUCTION_ITEM_CODE IN('P-120','P-140','P-150','P-160')
+          AND EMP_CODE=C_EMPLOYEE.EMP_CODE
+         )
+         LOOP   --PAY_DEDUCTION_UPDATE_FIRST 시작
+            CASE WHEN C_PAY_DEDUCTION_UPDATE_FIRST.PAY_DEDUCTION_ITEM_CODE='P-120' THEN  --국민연금보험 금액 업데이트
+                       
+                       v_national_insurance_price := v_total_income_price * v_national_pen_rate/100;
+                       
+                       UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_national_insurance_price,-2)
+                       WHERE pay_deduction_item_code='P-120'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                       
+                 WHEN C_PAY_DEDUCTION_UPDATE_FIRST.PAY_DEDUCTION_ITEM_CODE='P-140' THEN --건강보험 금액 업데이트
+                  
+                      v_health_insurance_price := v_total_income_price * v_health_insur_rate/100;
+                      
+                      UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_health_insurance_price,-2)
+                       WHERE pay_deduction_item_code='P-140'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                 WHEN C_PAY_DEDUCTION_UPDATE_FIRST.PAY_DEDUCTION_ITEM_CODE='P-150' THEN --고용보험 금액 업데이트
+                     
+                       v_employeement_insurance_price := v_total_income_price * v_employeement_insur_rate/100;
+                      
+                      UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_employeement_insurance_price,-2)
+                       WHERE pay_deduction_item_code='P-150'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                 WHEN C_PAY_DEDUCTION_UPDATE_FIRST.PAY_DEDUCTION_ITEM_CODE='P-160' THEN --소득세 업데이트
+                      
+                        v_income_tax := v_total_income_price * v_income_tax_rate /100;
+                      
+                       UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_income_tax,-2)
+                       WHERE pay_deduction_item_code='P-160'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                 ELSE
+                      DBMS_OUTPUT.PUT_LINE('NOT FOUND DATA');
+            END CASE;
+            
+         END LOOP; --PAY_DEDUCTION_UPDATE_FIRST 종료
+     
+     
+                 FOR C_PAY_DEDUCTION_UPDATE_SECOND IN(
+                     SELECT * 
+                     FROM PAY_DEDUCTION
+                     WHERE PAY_DEDUCTION_ITEM_CODE IN('P-130','P-170')
+                     AND EMP_CODE=C_EMPLOYEE.EMP_CODE
+                 )
+            LOOP --PAY_DEDUCTION_UPDATE_SECOND 시작
+            
+            
+             CASE WHEN C_PAY_DEDUCTION_UPDATE_SECOND.PAY_DEDUCTION_ITEM_CODE='P-130' THEN  --장기요양보험 금액 업데이트
+                       
+                       v_long_term_care_price := v_health_insurance_price * v_long_term_care_rate/100;
+                       
+                       UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_long_term_care_price,-2)
+                       WHERE pay_deduction_item_code='P-130'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                       
+                  WHEN C_PAY_DEDUCTION_UPDATE_SECOND.PAY_DEDUCTION_ITEM_CODE='P-170' THEN --지방소득세 업데이트
+                      
+                        v_local_income_tax :=  v_income_tax * v_local_income_tax_rate/100;
+                       
+                       UPDATE PAY_DEDUCTION SET
+                       PRICE = ROUND(v_local_income_tax,-2)
+                       WHERE pay_deduction_item_code='P-170'
+                       AND EMP_CODE=C_EMPLOYEE.EMP_CODE;
+                  ELSE
+                        DBMS_OUTPUT.PUT_LINE('NOT FOUND DATA');
+                   END CASE;
+            
+            END LOOP; --PAY_DEDUCTION_UPDATE_SECOND 종료
+     
+     -------------------------------------
+     
+     ------------------SAL_INPUT테이블에 넣기-------------------------
+     
+                SELECT HIRE_DATE
+                      ,RETIRE_DATE 
+                INTO 
+                      v_hire_date
+                     ,v_retire_date
+                FROM WORK_INFO
+                WHERE EMP_CODE=C_EMPLOYEE.EMP_CODE;
+     
+     
+              SELECT SUM(P.PRICE) 
+              INTO v_total_salary
+              FROM  PAY_DEDUCTION P 
+                   ,PAY_DEDUCTION_MGT M
+              WHERE P.PAY_DEDUCTION_ITEM_CODE=M.PAY_DEDUCTION_ITEM_CODE
+              AND M.PAY_DEDUCTION_TYPE_CODE='PDC001'
+              AND EMP_CODE= C_EMPLOYEE.EMP_CODE;
+     
+            
+              SELECT SUM(P.PRICE) 
+              INTO v_total_deduction_price
+              FROM PAY_DEDUCTION P 
+                  ,PAY_DEDUCTION_MGT M
+              WHERE P.PAY_DEDUCTION_ITEM_CODE=M.PAY_DEDUCTION_ITEM_CODE
+              AND M.PAY_DEDUCTION_TYPE_CODE='PDC002'
+              AND EMP_CODE= C_EMPLOYEE.EMP_CODE;
+     
+     v_chine_payments:= v_total_salary - v_total_deduction_price;
+     
+     
+     INSERT INTO SAL_INPUT
+       (PAYMENT_DATE
+      ,EMP_CODE
+      ,SALARY_TYPE_CODE
+      ,TOTAL_SALARY
+      ,TOTAL_DEDUCTION_PRICE
+      ,DEPT_CODE
+      ,POSITION_CODE
+      ,HIRE_DATE
+      ,RETIRE_DATE
+      ,CHINE_PAYMENTS)    
+    VALUES(
+      p_payment_date
+     ,C_EMPLOYEE.EMP_CODE
+     ,'PAC002'
+     ,v_total_salary
+     ,v_total_deduction_price
+     ,C_EMPLOYEE.DEPT_CODE
+     ,C_EMPLOYEE.POSITION_CODE
+     ,v_hire_date
+     ,v_retire_date
+     ,v_chine_payments);
+ 
+     
+     ----------------SAL_INPUT_TABLE에 다넣음------------------------------------------------
+     
+     
+     END LOOP; --사원커서 종료
+ -----------------------------------------------------------------------------    
+     END IF;  --월근태마감이 됬을경우 안됬을경우 종료 IF
+END P_CALC_PAY;
+
+END P_HR_PAY;
+
+/

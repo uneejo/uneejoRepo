@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQLMap 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="deliveryResult">
+
+<typeAlias alias="deliveryResultTO" type="com.project.uniproduct.logistics.sales.to.DeliveryResultTO"/>
+
+<insert id="insertDeliveryResult" parameterClass="deliveryResultTO">
+Insert into Delivery_Result 
+	( DELIVERY_NO, CONTRACT_DETAIL_NO, WAREHOUSE_CODE,
+		ITEM_CODE, ITEM_NAME, UNIT_OF_DELIVERY_RESULT, DELIVERY_DATE,
+		DELIVERY_AMOUNT, DESCRIPTION ) 
+values ( #deliveryNo:VARCHAR# , #contractDetailNo:VARCHAR# , #warehouseCode:VARCHAR# , 
+	#itemCode:VARCHAR# , #itemName:NVARCHAR# , #unitOfDeliveryResult:VARCHAR# , 
+	#deliveryDate:VARCHAR# , #deliveryAmount:INTEGER# , #description:NVARCHAR# )
+
+</insert>
+
+<update id="updateDeliveryResult" parameterClass="deliveryResultTO">
+UPDATE Delivery_Result SET 
+	CONTRACT_DETAIL_NO = #contractDetailNo:VARCHAR# , 
+	WAREHOUSE_CODE = #warehouseCode:VARCHAR# ,
+	ITEM_CODE = #itemCode:VARCHAR# , 
+	ITEM_NAME = #itemName:NVARCHAR# , 
+	UNIT_OF_DELIVERY_RESULT = #unitOfDeliveryResult:VARCHAR# , 
+	DELIVERY_DATE = #deliveryDate:VARCHAR# , 
+	DELIVERY_AMOUNT = #deliveryAmount:INTEGER# , 
+	DESCRIPTION = #description:NVARCHAR# 
+WHERE DELIVERY_NO = #deliveryNo#
+
+</update>
+
+<delete id="deleteDeliveryResult" parameterClass="deliveryResultTO">
+	DELETE FROM DELIVERY_RESULT WHERE DELIVERY_NO = #deliveryNo#
+</delete>
+
+
+
+
+
+</sqlMap>

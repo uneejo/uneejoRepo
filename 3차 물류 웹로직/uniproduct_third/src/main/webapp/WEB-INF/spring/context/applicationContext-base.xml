@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+
+ <bean id="addressDAOImpl"
+		class="com.project.uniproduct.base.dao.AddressDAOImpl"
+		parent="iBatisSupportDao">
+	</bean>
+
+<bean id="codeDAOImpl"
+		class="com.project.uniproduct.base.dao.CodeDAOImpl"
+		parent="iBatisSupportDao">
+	</bean>
+	
+	<bean id="codeDetailDAOImpl"
+		class="com.project.uniproduct.base.dao.CodeDetailDAOImpl"
+		parent="iBatisSupportDao">
+	</bean>
+
+    <bean id="reportDAOImpl"
+		class="com.project.uniproduct.base.dao.ReportDAOImpl"
+		parent="iBatisSupportDao">
+	</bean>
+
+   <bean id="addressApplicationServiceImpl"
+		class="com.project.uniproduct.base.applicationService.AddressApplicationServiceImpl">
+		<property name="addressDAO"
+			ref="addressDAOImpl" />
+	</bean>
+
+<bean id="codeApplicationServiceImpl"
+		class="com.project.uniproduct.base.applicationService.CodeApplicationServiceImpl">
+		<property name="codeDAO"  ref="codeDAOImpl" />
+	    <property name="codeDetailDAO"  ref="codeDetailDAOImpl" />
+	</bean>
+	
+	
+    <bean id="reportApplicationServiceImpl"
+		class="com.project.uniproduct.base.applicationService.ReportApplicationServiceImpl">
+		<property name="reportDAO"
+			ref="reportDAOImpl" />
+	</bean>
+	
+	<bean id="baseServiceFacadeImpl"
+		class="com.project.uniproduct.base.serviceFacade.BaseServiceFacadeImpl">
+		<property name="codeAS" ref="codeApplicationServiceImpl" />
+		<property name="addressAS" ref="addressApplicationServiceImpl" />
+		<property name="reportAS" ref="reportApplicationServiceImpl" />
+	</bean>
+
+
+
+</beans>

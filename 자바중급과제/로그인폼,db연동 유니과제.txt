@@ -1,0 +1,112 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+
+class DBUtil{
+public static Connection getConnection() throws Exception{
+Class.forName("oracle.jdbc.driver.OracleDriver");
+String url = "jdbc:oracle:thin:@localhost:1521:xe";
+String id = "scott"; String pass = "tiger";
+Connection conn = DriverManager.getConnection (url,id,pass); 
+return conn; 
+}
+}
+
+class MyFrame extends Frame{
+Button b1,b2;
+TextField tf1,tf2;
+Label la1,la2,la3;
+Panel p1,p2,p3,p4;
+
+MyFrame(){
+b1= new Button("취소");
+b2= new Button("로그인");
+tf1=new TextField();
+tf2=new TextField();
+la1=new Label("로그인",Label.CENTER);
+la2=new Label("ID",Label.CENTER);
+la3=new Label("PW",Label.CENTER);
+p1=new Panel();
+p2=new Panel();
+p3=new Panel();
+p4=new Panel();
+
+}
+
+void decoComponent(){
+	b1.setBackground(Color.yellow);
+	b2.setBackground(Color.orange);
+	la1.setBackground(Color.pink);
+	la2.setBackground(Color.gray);
+	la3.setBackground(Color.gray);
+}
+
+void addComponent(){
+	setLayout(new BorderLayout());   
+	add(p1,"North"); add(p2,"West"); add(p3,"South"); add(p4);
+	p1.setLayout(new BorderLayout());
+	p1.add(la1); 
+	
+	p2.setLayout(new GridLayout(2,1));
+	p2.add(la2); 
+	p2.add(la3);
+	
+	p4.setLayout(new GridLayout(2,1));
+	p4.add(tf1);
+	p4.add(tf2);
+	
+    p3.setLayout(new GridLayout(1,2));
+	p3.add(b1); p3.add(b2);
+	
+    b2.addActionListener(new C(this));
+	b1.addActionListener(new CC(this));
+	}
+}
+
+class CC implements ActionListener{
+	MyFrame f;
+	CC(MyFrame f){ this.f=f;}
+	public void actionPerformed(ActionEvent e){
+		f.tf1.setText("");
+		f.tf2.setText("");
+	}
+}
+
+
+
+class C implements ActionListener{
+	MyFrame f;
+	C(MyFrame f){ this.f=f;}
+	
+	public void actionPerformed(ActionEvent e){
+       try{Connection conn= DBUtil.getConnection();
+		Statement stmt= conn.createStatement();
+		String id=f.tf1.getText();
+		String sql="select id from member where id='"+id+"'";
+		ResultSet rs=stmt.executeQuery(sql);
+              if(rs.next())			
+			  {String pw=f.tf2.getText();
+		       String sql2="select id from member where pw='"+pw+"'";
+		       ResultSet rs1=stmt.executeQuery(sql2);
+			   rs1.next();
+			    if(id.equals(rs1.getString(1)))
+				{System.out.println("로그인성공");}
+		        else{System.out.println("비밀번호오류");}// 다른아이디 비밀번호 입력했을때(테이블에는 존재하니까)
+		       }
+			  else{
+				  System.out.println("존재하지않는아이디");
+			  }			
+	       }
+       catch(Exception eee){System.out.println("비밀번호오류");}
+		   }
+}
+
+class B{
+public static void main(String args[]){
+MyFrame f = new MyFrame();
+f.setVisible(true);
+f.setBounds(300,300,300,200);
+f.addComponent();
+f.decoComponent();
+}
+}

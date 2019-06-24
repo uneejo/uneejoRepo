@@ -1,0 +1,213 @@
+1. menu에 등록하기
+
+<a href="<%=request.getContextPath()%>/joinformm.html">회원가입2</a><br/>
+
+2.urlmapping에 등록하기
+/joinformm.html=urlFilenameViewController
+
+3.main에 등록 되어있음
+urlFilenameViewController=kr.co.seoulit.common.servlet.mvc.UrlFilenameViewController
+
+4. 다음 뷰 joinformm.jsp 뜸!
+
+joinformm.jsp
+===================================
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+<style type="text/css"> 
+#container td { 
+border:1px solid navy; width:100px;
+text-align:center; 
+}
+</style>
+<script src="https://code.jquery.com/jquery-1.10.2.js">
+</script>
+<script src="jquery.json-2.3.js">
+</script>
+<script>
+$(document).ready(function(){
+initTable();
+$("#addButton").click(addFunc);
+$("#updateButton").click(updateFunc);
+});
+
+function initTable(){
+var colArray=["ID","PW","ADDR","TEL"];
+var trObj=$("<tr/>");
+trObj.appendTo("#container");
+$.each(colArray,function(index,name){
+$("<td/>",{"html":name}).appendTo(trObj);
+}); 
+}
+
+var num=0;
+function addFunc(){
+	num++;
+eval("var trObj=$('<tr id=t"+num+"/>')");
+trObj.appendTo("#container");
+for(var col=0; col<4; col++){
+eval("var tdObj=$('<td id=t"+num+"-"+col+"/>')");
+tdObj.append(
+$("<input type=text />").css({"width":"100px"})
+).appendTo(trObj).keypress(function(e){
+if(e.keyCode==13){
+	$(this).html($($(this).children()[0]).val());
+	$($(this).children()[0]).remove();
+	$($(this).next().children()[0]).focus();
+}
+});
+}
+
+}
+
+function MyGrid(){
+	
+	this.getrow=function(rownum){
+		var n=rownum;
+		var str="";
+		for(a=0; a<4; a++){
+			var ttt=eval("$('#t"+n+"-"+a+"').text()");
+		if(ttt.trim().length!=0)
+		{str+="/"+ttt}
+		else
+			{str+="/"}
+		}
+		
+		var title=["id","pw","addr","tel"];
+		var obj={};
+		var array=str.split("/");
+		for(b=0; b<4; b++){
+			var v=String(array[b+1]);
+			if(v.trim().length!=0)
+			{obj[""+title[b]+""]=v;}	
+			
+		}
+	 if(Object.getOwnPropertyNames(obj).length===0)
+		 {return null;}
+	 else {return obj;} 
+	}	
+}
+
+function updateFunc(){
+	
+	var dataSet=[];	
+	var mygrid=new MyGrid()
+	for(c=1; c<$("#container").find('tr').length; c++){
+	dataSet.push(mygrid.getrow(c));
+	}
+	var data={"list":dataSet}
+	var s=$.toJSON(data);
+	var ss=encodeURIComponent(s);
+    location.href="<%=request.getContextPath()%>/member/joinn.do?sendData="+ss+""
+	
+}
+
+
+</script>
+</head>
+<body>
+<input type="button" value="추가" id="addButton">
+<input type="button" value="업데이트" id="updateButton"><br/>
+<table id="container"></table>
+</body>
+</html>
+
+
+5. joinformm.jsp 에서 업데이트 버튼 누르면 json 문자로  joinn.do로 날아감
+location.href="<%=request.getContextPath()%>/member/joinn.do?sendData="+ss+""
+
+6. joinn.do는 urlmapping.properties 등록안되있으니까 다시 등록
+/member/joinn.do=memberJoinnController
+
+7.member.properties에도 등록
+memberJoinnController=kr.co.seoulit.member.controller.MemberJoinnController
+
+8.MemberJoinnController 만들기(joincontroller 베껴와서 json받는거만 고쳐주면 됨)
+
+MemberJoinnController
+=================================
+package kr.co.seoulit.member.controller;
+
+import java.util.HashMap;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import kr.co.seoulit.common.servlet.ModelAndView;
+import kr.co.seoulit.common.servlet.mvc.Controller;
+import kr.co.seoulit.member.sf.MemberServiceFacade;
+import kr.co.seoulit.member.sf.MemberServiceFacadeImpl;
+import kr.co.seoulit.member.to.MemberBean;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+public class MemberJoinnController implements Controller {
+
+	@Override
+	public ModelAndView handleRequest(HttpServletRequest request,
+			HttpServletResponse response){
+		// TODO Auto-generated method stub
+		 String uri=request.getRequestURI();
+		 String contextPath=request.getContextPath();
+		 String viewName="redirect:"+contextPath+"/menu.html";
+		 HashMap<String,Object> map=new HashMap<String,Object>();
+		ModelAndView mav=null;
+	 	try {		
+	 		String s=request.getParameter("sendData");
+	 		System.out.println(s);
+	 		JSONObject json=JSONObject.fromObject(s);
+	 		JSONArray array=(JSONArray)json.get("list");
+	 		for(int a=0; a<array.size(); a++) {
+	 		JSONObject json1=array.getJSONObject(a);
+	 		MemberBean bean1=(MemberBean)JSONObject.toBean(json1,MemberBean.class);
+			MemberServiceFacade sf=MemberServiceFacadeImpl.getInstance();
+			sf.addMember(bean1);
+	 		}
+
+	 		 mav=new ModelAndView(viewName,null);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+	 		 map.put("errorCode", -1);
+	 		 map.put("errorMsg", e.getMessage());
+	 		 mav=new ModelAndView("error",map);
+		}	
+		return mav;
+	}
+}
+
+9. 8까지하면거의 다되었고 null 받아오면  오류에 에러메세지 null만 뜨는 거 보기 싫음! 
+NullPointerException 상속받아서 NullInfoException 만들어줌
+
+NullInfoException.java
+====================================
+package kr.co.seoulit.member.exception;
+@SuppressWarnings("serial")
+public class NullInfoException extends NullPointerException{
+public NullInfoException(String msg){
+super(msg);
+}
+}
+
+10. 당연히 sf도 수정해줌! (import는 기본~~)
+public void addMember(MemberBean bean) throws NullInfoException; 
+
+11. sf impl도 같이 수정
+
+MemberServiceFacadeImpl.java
+=============
+@Override
+	public void addMember(MemberBean bean) throws NullInfoException{
+		// TODO Auto-generated method stub
+		
+		if(bean==null)
+			{throw new NullInfoException("가입정보가 아예 없습니다.");}
+	
+		MemberDAOImpl.getInstance().insertMember(bean);
+		
+	}
+
+끝~~

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.2.xsd">
+		
+		
+		<tx:advice id="transactionAdvice"
+		transaction-manager="transactionManager">
+		<tx:attributes>
+		<!--update,delete,insert 하나의 트랜젝션으로 처리하니까-->
+		 <tx:method name="batch*" propagation="REQUIRED" /> 
+		 <tx:method name="register*" propagation="REQUIRED" />
+		 <tx:method name="add*" propagation="REQUIRED" />
+		 <tx:method name="convert*" propagation="REQUIRED" />
+		 
+		 <!-- select문은 읽기 전용으로 셋팅 -->
+		 <tx:method name="get*" read-only="true" />
+		 <tx:method name="select*" read-only="true" />
+		 <tx:method name="open*" read-only="true" />
+		 <tx:method name="accessToAuthority*" read-only="true" />
+		 
+		</tx:attributes>
+	</tx:advice>
+
+	<bean id="commonAdvice"
+		class="com.project.uniproduct.common.advice.CommonAdvice">
+	</bean>
+
+
+	<aop:config>
+
+		<aop:pointcut id="serviceDaoPointcut"
+		  expression="execution(* com.project.uniproduct..serviceFacade.*.*(..)) or
+		              execution(* com.project.uniproduct..applicationService.*.*(..))or 
+		              execution(* com.project.uniproduct..dao.*.*(..))" />
+                  
+       
+        <aop:pointcut id="servicePointcut"
+           expression="execution(* com.project.uniproduct..serviceFacade.*.*(..))" />      
+       
+       
+        <aop:advisor advice-ref="transactionAdvice"
+               pointcut-ref="servicePointcut" />
+               
+        <aop:aspect id="commonAspect" ref="commonAdvice">
+               <aop:around pointcut-ref="serviceDaoPointcut"
+                  method="logging" />
+               <aop:after-throwing pointcut-ref="servicePointcut" 
+                method="afterThrowing" throwing="ex" />   <!--throwing="예외의 변수명"  -->
+           
+        </aop:aspect>
+
+       
+	</aop:config>
+
+
+</beans>

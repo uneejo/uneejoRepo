@@ -1,0 +1,58 @@
+
+import java.awt.*;
+import java.awt.event.*;
+
+class MyFrame extends Frame{
+Button b1,b2;
+TextField tf1,tf2,tf3;
+
+MyFrame(){
+b1= new Button("+");
+b2= new Button("=");
+tf1=new TextField();
+tf2=new TextField();
+tf3=new TextField(12);
+}
+
+void addButton(){
+	setLayout(new FlowLayout());
+	add(tf1); add(b1); add(tf2); add(b2); add(tf3);
+b2.addActionListener(new C(this));
+	}
+}
+
+class C implements ActionListener{
+	MyFrame f;
+	C(MyFrame f){ this.f=f;}
+	public void actionPerformed(ActionEvent e){
+     
+	try{ String ttt = f.tf1.getText();
+	 String tttt= f.tf2.getText();
+	 int n=Integer.parseInt(ttt);
+	 int n2=Integer.parseInt(tttt);
+	 f.tf3.setText(ttt+"+"+tttt+"="+(n+n2)+"");
+	 
+	}
+	catch(NumberFormatException e1){
+		f.tf3.setText("숫자만 입력하세요~");}
+   
+    finally{
+		if(f.tf1.getText().equals("") || f.tf2.getText().equals("")){f.tf3.setText("값을 입력하세요~");}
+	}
+	
+   
+	}
+	
+ 
+ }
+
+
+class B{
+public static void main(String args[]){
+MyFrame f = new MyFrame();
+f.setVisible(true);
+f.setBounds(300,300,300,200);
+f.addButton();
+
+}
+}

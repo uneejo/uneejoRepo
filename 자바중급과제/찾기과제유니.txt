@@ -1,0 +1,74 @@
+// 찾기 만들기 과제
+
+import java.awt.*;
+import java.awt.event.*;
+
+class A extends Frame{
+	Button b1;
+	TextField tf1;
+	TextArea ta1;
+	Panel p1,p2;
+	
+	A(){
+		setLayout(new BorderLayout());
+		p1=new Panel();
+		p2=new Panel();
+		add(p1,"North"); add(p2);
+		
+		
+		p1.setLayout(new BorderLayout());
+		tf1=new TextField();
+		b1=new Button("찾기");
+		p1.add(tf1); p1.add(b1,"East");
+		
+		p2.setLayout(new BorderLayout());
+		ta1=new TextArea();
+		p2.add(ta1);
+	
+		String j="sfsagdsfgsdfhdsgfdsgdsfh";
+		ta1.append(j);
+		
+		b1.addActionListener(new Handeler(this));
+	}
+}
+
+class Handeler implements ActionListener{
+	A o; int n=0;
+	Dialog a;
+	Label la;
+	Handeler(A o){this.o=o;
+	a= new Dialog(o);
+	la=new Label("찾을 내용이 없습니다",Label.CENTER);
+	}
+	
+	public void actionPerformed(ActionEvent e){
+           String v1=o.ta1.getText();
+		   String v=o.tf1.getText();
+		   
+		   int n1=v.length();
+    	  	
+		    n=v1.indexOf(v,n);
+          
+		  if(n!=-1) {
+			  o.ta1.requestFocus();		  
+		      o.ta1.select(n,n+n1);
+			  n+=n1;
+			           
+		   }
+		  else{
+			   a.setVisible(true);
+			   a.add(la);
+			   a.setBounds(300,200,200,100);
+		  }
+	}
+}
+
+
+class C{
+	public static void main(String args[]){
+		A f=new A();
+		f.setBounds(200,200,300,300);
+		f.setVisible(true);
+	}
+}
+

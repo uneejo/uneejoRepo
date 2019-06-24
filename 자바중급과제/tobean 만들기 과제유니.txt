@@ -1,0 +1,123 @@
+<1> 유니답
+import java.util.*;
+import java.lang.reflect.*;
+
+class Member{
+	String id,pw,addr,tel;
+	void setId(String id){ this.id=id;  }
+	void setPw(String pw){ this.pw=pw;  }
+	void setAddr(String addr){ this.addr=addr;  }
+	void setTel(String tel){ this.tel=tel;  }
+	String getId(){ return id; }
+	String getPw(){ return pw; }
+	String getAddr(){ return addr; }
+	String getTel(){ return tel; }
+}
+
+class Emp{
+	String empno,ename;
+	void setEmpno(String empno){ this.empno=empno;  }
+	void setEname(String ename){ this.ename=ename;  }
+	String getEmpno(){ return empno; }
+	String getEname(){ return ename; }
+	
+}
+
+
+class A{
+  public static void main(String args[])throws Exception{
+  HashMap<String,String> map1=new HashMap<>();
+  map1.put("id","aa");
+  map1.put("pw","bb");
+  map1.put("addr","cc");
+  map1.put("tel","dd");
+  HashMap<String,String> map2=new HashMap<>();
+  map2.put("empno","ee");
+  map2.put("ename","ff");
+  
+
+  Member member=(Member)toBean(Member.class, map1);
+  Emp emp=(Emp)toBean(Emp.class, map2);
+  
+  System.out.println(member.getId());
+  System.out.println(member.getPw());
+  System.out.println(member.getAddr());
+  System.out.println(member.getTel());
+  System.out.println(emp.getEmpno());
+  System.out.println(emp.getEname());
+  
+ }
+  public static Object toBean(Class<?> n,HashMap map)throws Exception{	 
+	      Object oo=n.newInstance();
+		Set<String> a=map.keySet();
+		for(String b:a)
+		{String c=b.substring(0,1).toUpperCase()+b.substring(1);
+		Method mm=n.getDeclaredMethod("set"+c,String.class);
+		mm.invoke(oo,map.get(b));
+		}
+	 return oo;
+}
+
+}
+
+<2>다른사람답인데 <T>T?이해안됨....ㅠ
+import java.util.*;
+import java.lang.reflect.*;
+
+class Member{
+	String id,pw,addr,tel;
+	void setId(String id){ this.id=id;  }
+	void setPw(String pw){ this.pw=pw;  }
+	void setAddr(String addr){ this.addr=addr;  }
+	void setTel(String tel){ this.tel=tel;  }
+	String getId(){ return id; }
+	String getPw(){ return pw; }
+	String getAddr(){ return addr; }
+	String getTel(){ return tel; }
+}
+
+class Emp{
+	String empno,ename;
+	void setEmpno(String empno){ this.empno=empno;  }
+	void setEname(String ename){ this.ename=ename;  }
+	String getEmpno(){ return empno; }
+	String getEname(){ return ename; }
+	
+}
+
+
+class A{
+  public static void main(String args[])throws Exception{
+  HashMap<String,String> map1=new HashMap<>();
+  map1.put("id","aa");
+  map1.put("pw","bb");
+  map1.put("addr","cc");
+  map1.put("tel","dd");
+  HashMap<String,String> map2=new HashMap<>();
+  map2.put("empno","ee");
+  map2.put("ename","ff");
+  
+
+  Member member=toBean(Member.class, map1);
+  Emp emp=toBean(Emp.class, map2);
+  
+  System.out.println(member.getId());
+  System.out.println(member.getPw());
+  System.out.println(member.getAddr());
+  System.out.println(member.getTel());
+  System.out.println(emp.getEmpno());
+  System.out.println(emp.getEname());
+  
+ }
+  public static <T>T toBean(Class<T> n,HashMap<String,String> map)throws Exception{	 
+	      T oo=n.newInstance();
+		Set<String> a=map.keySet();
+		for(String b:a)
+		{String c=b.substring(0,1).toUpperCase()+b.substring(1);
+		Method mm=n.getDeclaredMethod("set"+c,String.class);
+		mm.invoke(oo,map.get(b));
+		}
+	 return oo;
+}
+
+}

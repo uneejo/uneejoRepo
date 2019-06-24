@@ -1,0 +1,231 @@
+<1> 4개 5개 나올때도 있음.
+import java.util.*;
+import java.awt.*;
+import java.awt.event.*;
+
+
+class execLotto{
+    
+static void execLottoo(TextField tf1){	
+	Set<String>set=new HashSet<>();
+	
+        Random r = new Random();
+	for(int aa=0; aa<6; aa++){
+	String a= r.nextInt(45)+1+"";
+	set.add(a);
+	}
+	   
+	   Iterator<String> it =set.iterator();
+		  
+		  String kk=it.next();
+		  while(it.hasNext())
+			  {kk=kk+","+it.next(); }
+	      tf1.setText(kk);
+  }
+
+}
+
+
+class LottoForm extends Frame{
+	Button b1;
+	TextField tf1;
+	Panel p1,p2;
+	
+	LottoForm(){
+		p1=new Panel();
+		p2=new Panel();
+		b1= new Button("숫자생성기");
+		tf1=new TextField(20);	
+	}
+	
+	
+	void addComponent(){
+
+	setLayout(new FlowLayout());
+		add(b1);
+		add(tf1);
+	}
+	
+	void actionButton(){
+		C handler=new C(this); 
+		b1.addActionListener(handler);
+	}
+}
+
+class C implements ActionListener{
+	LottoForm l;
+	C(LottoForm l){this.l=l;}
+	
+	public void actionPerformed(ActionEvent e){
+	execLotto.execLottoo(l.tf1);	
+	}
+}
+
+
+
+
+class A{
+	public static void main(String[]args){
+	LottoForm l=new LottoForm();
+	l.setVisible(true);
+	l.setBounds(300,200,300,100);
+	l.addComponent();
+	l.actionButton();
+    }
+}
+
+<2>강제로 6개 생성하게 하기.-안되면 exception뜸
+import java.util.*;
+import java.awt.*;
+import java.awt.event.*;
+
+
+class execLotto{
+    
+static void execLottoo(TextField tf1){	
+	Set<String>set=new HashSet<>();
+	
+	Random r = new Random();
+	
+	for(int aa=0; aa<6; aa++){
+	String a= r.nextInt(45)+1+"";
+	set.add(a);	
+	}
+	 
+     ArrayList<String>list=new ArrayList<>();
+            
+			for(String b:set)
+			    list.add(b);
+			
+			String k=list.get(0);
+			for(int i=1; i<6; i++)
+			{k=k+","+list.get(i);}
+	        tf1.setText(k);
+  }
+
+}
+
+
+class LottoForm extends Frame{
+	Button b1;
+	TextField tf1;
+	Panel p1,p2;
+	
+	LottoForm(){
+		p1=new Panel();
+		p2=new Panel();
+		b1= new Button("숫자생성기");
+		tf1=new TextField(20);	
+	}
+	
+	
+	void addComponent(){
+
+	setLayout(new FlowLayout());
+		add(b1);
+		add(tf1);
+	}
+	
+	void actionButton(){
+		C handler=new C(this); 
+		b1.addActionListener(handler);
+	}
+}
+
+class C implements ActionListener{
+	LottoForm l;
+	C(LottoForm l){this.l=l;}
+	
+	public void actionPerformed(ActionEvent e){
+	execLotto.execLottoo(l.tf1);	
+	}
+}
+
+
+
+
+class A{
+	public static void main(String[]args){
+	LottoForm l=new LottoForm();
+	l.setVisible(true);
+	l.setBounds(300,200,300,100);
+	l.addComponent();
+	l.actionButton();
+    }
+}
+
+<3> 최종답안
+
+import java.util.*;
+import java.awt.*;
+import java.awt.event.*;
+
+
+class execLotto{
+    
+static void execLottoo(TextField tf1){	
+	Set<String>set=new HashSet<>();
+	
+        Random r = new Random();
+		
+		while(set.size()<6) 
+		   { String a= r.nextInt(45)+1+"";
+		   set.add(a);}
+			
+	
+	   Iterator<String> it =set.iterator();
+		  
+		  String kk=it.next();
+		  while(it.hasNext())
+			  {kk=kk+","+it.next(); }
+	      tf1.setText(kk);
+  }
+
+}
+
+
+class LottoForm extends Frame{
+	Button b1;
+	TextField tf1;
+	Panel p1,p2;
+	
+	LottoForm(){
+		p1=new Panel();
+		p2=new Panel();
+		b1= new Button("숫자생성기");
+		tf1=new TextField(20);	
+	}
+	
+	
+	void addComponent(){
+
+	setLayout(new FlowLayout());
+		add(b1);
+		add(tf1);
+	}
+	
+	void actionButton(){
+		C handler=new C(this); 
+		b1.addActionListener(handler);
+	}
+}
+
+class C implements ActionListener{
+	LottoForm l;
+	C(LottoForm l){this.l=l;}
+	
+	public void actionPerformed(ActionEvent e){
+	execLotto.execLottoo(l.tf1);	
+	}
+}
+
+
+class A{
+	public static void main(String[]args){
+	LottoForm l=new LottoForm();
+	l.setVisible(true);
+	l.setBounds(300,200,300,100);
+	l.addComponent();
+	l.actionButton();
+    }
+}

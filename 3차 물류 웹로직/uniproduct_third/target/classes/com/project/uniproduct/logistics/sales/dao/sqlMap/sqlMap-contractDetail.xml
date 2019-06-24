@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQLMap 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="contractDetail">
+<typeAlias alias="contractDetailTO" type="com.project.uniproduct.logistics.sales.to.ContractDetailTO"/>
+
+<resultMap id="contractDetailResult" class="contractDetailTO">
+	<result property="contractDetailNo" column="CONTRACT_DETAIL_NO" />
+	<result property="contractNo" column="CONTRACT_NO" />
+	<result property="itemCode" column="ITEM_CODE" />
+	<result property="itemName" column="ITEM_NAME" />
+	<result property="unitOfContract" column="UNIT_OF_CONTRACT" />
+	<result property="dueDateOfContract" column="DUE_DATE_OF_CONTRACT" />
+	<result property="contractAmount" column="CONTRACT_AMOUNT" />
+	<result property="unitPriceOfContract" column="UNIT_PRICE_OF_CONTRACT" />
+	<result property="sumPriceOfContract" column="SUM_PRICE_OF_CONTRACT" />
+	<result property="mpsApplyStatus" column="MPS_APPLY_STATUS" />
+	<result property="deliveryStatus" column="DELIVERY_STATUS" />
+	<result property="description" column="DESCRIPTION" />
+		
+</resultMap>
+
+<resultMap id="contractDetailNoResult" class="contractDetailTO">
+	<result property="contractDetailNo" column="CONTRACT_DETAIL_NO" jdbcType="VARCHAR" javaType="string" />
+		
+</resultMap>
+
+<select id="selectContractDetailList" parameterClass="string" resultMap="contractDetailResult">
+SELECT * 
+FROM CONTRACT_DETAIL 
+WHERE CONTRACT_NO = #contractNo#
+
+</select>
+
+<select id="selectContractDetailCount" parameterClass="string" resultMap="contractDetailNoResult">
+SELECT CONTRACT_DETAIL_NO 
+FROM CONTRACT_DETAIL 
+WHERE CONTRACT_NO = #contractNo#
+</select>
+
+<typeAlias alias="contractDetailInMpsAvailableTO" type="com.project.uniproduct.logistics.production.to.ContractDetailInMpsAvailableTO"/>
+
+<resultMap id="contractDetailInMpsAvailableResult" class="contractDetailInMpsAvailableTO" >
+	<result property="contractDetailNo" column="CONTRACT_DETAIL_NO" />
+	<result property="contractType" column="CONTRACT_TYPE" />
+<!-- 	<result property="planClassification" column="PLAN_CLASSIFICATION" /> -->
+	<result property="contractDate" column="CONTRACT_DATE" />
+<!-- 	<result property="mpsPlanDate" column="MPS_PLAN_DATE" /> -->
+<!-- 	<result property="scheduledEndDate" column="" /> -->
+	<result property="deliveryDate" column="DELIVERY_DATE" jdbcType="VARCHAR" />
+	<result property="customerCode" column="CUSTOMER_CODE" />
+	<result property="customerName" column="CUSTOMER_NAME" />
+	<result property="contractRequester" column="CONTRACT_REQUESTER" />
+	<result property="itemCode" column="ITEM_CODE" />
+	<result property="itemName" column="ITEM_NAME" />
+	<result property="unitOfContract" column="UNIT_OF_CONTRACT" />
+	<result property="contractAmount" column="CONTRACT_AMOUNT" nullValue="0" />
+	<result property="deliveryAmount" column="DELIVERY_AMOUNT" nullValue="0" />
+	<result property="planAmount" column="PLAN_AMOUNT" nullValue="0" />
+	<result property="dueDateOfContract" column="DUE_DATE_OF_CONTRACT" />
+	<result property="description" column="DESCRIPTION" />
+
+</resultMap>
+
+<select id="selectContractDetailListInMpsAvailable" parameterClass="map" resultMap="contractDetailInMpsAvailableResult" >
+WITH SEARCH_CONTRACT_DETAIL AS ( 
+
+    SELECT C2.CONTRACT_DETAIL_NO, C1.CONTRACT_NO, C1.CONTRACT_TYPE, C1.CONTRACT_DATE, 
+    	C1.CUSTOMER_CODE, C1.CONTRACT_REQUESTER,
+		C2.ITEM_CODE, C2.ITEM_NAME, C2.UNIT_OF_CONTRACT, C2.DUE_DATE_OF_CONTRACT, C2.CONTRACT_AMOUNT, 
+		C2.UNIT_PRICE_OF_CONTRACT, C2.SUM_PRICE_OF_CONTRACT, C2.DESCRIPTION
+	FROM CONTRACT C1, ( SELECT * FROM CONTRACT_DETAIL WHERE MPS_APPLY_STATUS IS NULL ) C2
+	WHERE ( CASE #searchCondition# WHEN 'contractDate' THEN TO_DATE(C1.CONTRACT_DATE, 'YYYY-MM-DD') 
+                           									 WHEN 'dueDateOfContract' THEN TO_DATE(C2.DUE_DATE_OF_CONTRACT, 'YYYY-MM-DD') END )
+    		BETWEEN TO_DATE(#startDate#, 'YYYY-MM-DD') AND TO_DATE(#endDate#,'YYYY-MM-DD')
+		AND C1.CONTRACT_NO = C2.CONTRACT_NO 
+),
+
+CONTRACT_DETAIL_WITH_DELIVERY AS ( 
+
+    SELECT C.CONTRACT_DETAIL_NO, C.CONTRACT_TYPE, C.CONTRACT_DATE, 
+    	D.DELIVERY_DATE, C.CUSTOMER_CODE, C.CONTRACT_REQUESTER,
+		C.ITEM_CODE, C.ITEM_NAME, C.UNIT_OF_CONTRACT,
+		C.CONTRACT_AMOUNT, D.DELIVERY_AMOUNT, 
+		( C.CONTRACT_AMOUNT - NVL(D.DELIVERY_AMOUNT,0) ) AS PLAN_AMOUNT, 
+		C.DUE_DATE_OF_CONTRACT, C.DESCRIPTION
+    FROM SEARCH_CONTRACT_DETAIL C,
+		( SELECT * FROM DELIVERY_RESULT
+			WHERE CONTRACT_DETAIL_NO IN ( SELECT CONTRACT_DETAIL_NO FROM SEARCH_CONTRACT_DETAIL ) ) D
+    WHERE ( C.CONTRACT_AMOUNT - NVL(D.DELIVERY_AMOUNT,0) ) &gt; 0
+	AND C.CONTRACT_DETAIL_NO = D.CONTRACT_DETAIL_NO (+) 
+
+)
+SELECT T1.CONTRACT_DETAIL_NO, T1.CONTRACT_TYPE, T1.CONTRACT_DATE, T1.DELIVERY_DATE, T1.CUSTOMER_CODE,
+	T2.CUSTOMER_NAME, T1.CONTRACT_REQUESTER, T1.ITEM_CODE, T1.ITEM_NAME, T1.UNIT_OF_CONTRACT, 
+	T1.CONTRACT_AMOUNT, T1.DELIVERY_AMOUNT, T1.PLAN_AMOUNT, 
+	T1.DUE_DATE_OF_CONTRACT, T1.DESCRIPTION
+FROM CONTRACT_DETAIL_WITH_DELIVERY T1, CUSTOMER T2
+WHERE T1.CUSTOMER_CODE = T2.CUSTOMER_CODE
+
+</select>
+
+<insert id="insertContractDetail" parameterClass="contractDetailTO">
+Insert into CONTRACT_DETAIL 
+	( CONTRACT_DETAIL_NO, CONTRACT_NO, ITEM_CODE, ITEM_NAME, UNIT_OF_CONTRACT, 
+	DUE_DATE_OF_CONTRACT, CONTRACT_AMOUNT, UNIT_PRICE_OF_CONTRACT, 
+	SUM_PRICE_OF_CONTRACT, MPS_APPLY_STATUS, DELIVERY_STATUS,DESCRIPTION) 
+values ( #contractDetailNo:VARCHAR# , #contractNo:VARCHAR# , #itemCode:VARCHAR# , 
+	#itemName:NVARCHAR# , #unitOfContract:VARCHAR# , #dueDateOfContract:VARCHAR# , 
+	#contractAmount:INTEGER# , #unitPriceOfContract:INTEGER# , #sumPriceOfContract:INTEGER# , 
+	#mpsApplyStatus:CHAR# , #deliveryStatus:VARCHAR# , #description:NVARCHAR# )
+	
+</insert>
+
+<update id="updateContractDetail" parameterClass="contractDetailTO">
+UPDATE CONTRACT_DETAIL SET 
+	CONTRACT_NO = #contractNo:VARCHAR#, 
+	ITEM_CODE = #itemCode:VARCHAR#, 
+	ITEM_NAME = #itemName:NVARCHAR#, 
+	UNIT_OF_CONTRACT = #unitOfContract:VARCHAR#, 
+	DUE_DATE_OF_CONTRACT = #dueDateOfContract:VARCHAR#, 
+	CONTRACT_AMOUNT = #contractAmount:INTEGER#, 
+	UNIT_PRICE_OF_CONTRACT = #unitPriceOfContract:INTEGER#, 
+	SUM_PRICE_OF_CONTRACT = #sumPriceOfContract:INTEGER#, 
+	MPS_APPLY_STATUS = #mpsApplyStatus:CHAR# , 
+	DELIVERY_STATUS = #deliveryStatus:VARCHAR#, 
+	DESCRIPTION = #description:NVARCHAR# 
+WHERE CONTRACT_DETAIL_NO = #contractDetailNo#
+
+</update>
+
+<update id="changeMpsStatusOfContractDetail" parameterClass="map">
+UPDATE CONTRACT_DETAIL SET 
+	MPS_APPLY_STATUS = #mpsStatus:CHAR#
+WHERE CONTRACT_DETAIL_NO = #contractDetailNo#
+
+</update>
+
+<delete id="deleteContractDetail" parameterClass="contractDetailTO">
+DELETE FROM CONTRACT_DETAIL 
+WHERE CONTRACT_DETAIL_NO = #contractDetailNo#
+
+</delete>
+
+
+</sqlMap>

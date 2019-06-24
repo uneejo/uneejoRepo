@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd">
+
+<bean id="userMenuDAOImpl"
+  class="com.project.uniproduct.authorityManager.dao.UserMenuDAOImpl"
+  parent="iBatisSupportDao">
+
+</bean>
+
+<bean id="empSearchingDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmpSearchingDAOImpl"
+  parent="iBatisSupportDao">
+
+</bean>
+
+<bean id="employeeSecretDAOImpl"
+  class="com.project.uniproduct.hr.dao.EmployeeSecretDAOImpl"
+  parent="iBatisSupportDao">
+</bean>
+
+<bean id="userMenuApplicationServiceImpl"
+ class="com.project.uniproduct.authorityManager.applicationService.UserMenuApplicationServiceImpl">
+ <property name="userMenuDAO" ref="userMenuDAOImpl"/>
+ </bean>
+
+<bean id="loginApplicationServiceImpl"
+ class="com.project.uniproduct.authorityManager.applicationService.LogInApplicationServiceImpl">
+ <property name="empSearchDAO" ref="empSearchingDAOImpl"/>
+  <property name="empSecretDAO" ref="employeeSecretDAOImpl"/>
+ </bean>
+ 
+ <bean id="authorityManagerServiceFacadeImpl"
+ class="com.project.uniproduct.authorityManager.serviceFacade.AuthorityManagerServiceFacadeImpl">
+ <property name="logInAS" ref="loginApplicationServiceImpl"/>
+  <property name="userMenuAS" ref="userMenuApplicationServiceImpl"/>
+ </bean>
+
+</beans>

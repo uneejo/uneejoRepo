@@ -1,0 +1,1182 @@
+3개짤른거
+---------------------------------------------
+SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+
+
+
+
+
+item이랑 bom계층 낸거 (정전개)-BOM넘버도 있다
+--------------------------------------
+(SELECT *
+from
+(SELECT CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE,NET_AMOUNT
+
+FROM BOM
+START WITH parent_item_code = 'NULL' AND ITEM_CODE='DK-01'--v_itemcode
+CONNECT BY PRIOR item_code=parent_item_code) b,
+ITEM i
+WHERE b.item_code=i.item_code) bi
+
+
+
+
+프로시저 기본틀 수정 중
+-----------------------------------------
+begin
+ DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+FOR mps IN c_mps
+  FOR r_mrp IN (bi테이블) LOOP
+     r_mrp.MPS_NO(임시테이블)=: mps.MPS_NO
+    select *from mps where item_code=bi.item_code
+
+
+
+발주일자 
+----------------------
+                        --예정마감일
+SELECT TO_CHAR( TO_DATE('2018-10-20', 'YYYY-MM-DD') -SUM(LEAD_TIME) , 'YYYY-MM-DD') sum_lead from
+(SELECT * FROM BOM
+START WITH ITEM_CODE='LN-01' --C_MPS.itemcode
+CONNECT BY PRIOR PARENT_ITEM_CODE=ITEM_CODE
+)bb,ITEM ii
+WHERE bb.item_code=ii.item_code   -- 발주날짜 구하는 쿼리
+
+
+
+MPS,BOM,ITEM합친거 필요한거 전부합친거
+---------------------------------------------------------
+SELECT M.mps_NO,BOM_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,M.DUE_DATE_OF_MPS,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+(SELECT root_code,BOM_NO,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code, CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH parent_item_code = 'NULL'--v_itemcode
+CONNECT BY PRIOR item_code=parent_item_code) b,
+ITEM i
+WHERE bi_item_code=i.item_code) bi,(SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)) M
+WHERE M.ITEM_CODE=bi.root_code
+
+
+
+손실률 계산한 거
+--------------------------------------------
+
+SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+LOSS_RATE)) over(ORDER BY LEV))-1,3) aa FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= 'LN-01'-- BI _ITEM_CODE
+         CONNECT BY PRIOR PARENT_ITEM_CODE = ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE;
+
+누적손실률계산한거 -최근
+---------------------------------------------
+
+SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+LOSS_RATE)) over(ORDER BY LEV DESC))-1,3) aa FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= 'DK-01'
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE;
+
+누적 손실률 한개만 빼오는 것
+----------------------------------------------
+SELECT * FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+LOSS_RATE)) over(ORDER BY LEV DESC))-1,3) aa FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= 'DK-AP01'-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE='DK-AP01'
+
+
+
+프로시저 만들기-계속 수정중
+-----------------------------------
+ CREATE OR REPLACE PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+       CURSOR C_MPS IS            --루프 돌기전 커서로 뽑아올값
+SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST);
+
+
+CURSOR c_req_date IS 
+SELECT TO_CHAR( TO_DATE('2018-10-20', 'YYYY-MM-DD') -SUM(LEAD_TIME) , 'YYYY-MM-DD') req_date from
+(SELECT * FROM BOM
+START WITH ITEM_CODE='LN-01' --C_MPS.itemcode
+CONNECT BY PRIOR PARENT_ITEM_CODE=ITEM_CODE
+)bb,ITEM ii
+WHERE bb.item_code=ii.item_code;   -- 발주날짜 구하는 쿼리
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    VARCHAR2( 100 ) ;
+v_order_date    VARCHAR2( 100 ) ; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mps IN c_mps LOOP
+    FOR r_mrp IN( 
+    (SELECT BOM_NO,b.ITEM_CODE AS ITEM_CODE,NET_AMOUNT,ITEM_NAME,ITEM_GROUP_CODE,ITEM_CLASSIFICATION,UNIT_OF_STOCK,nvl(LOSS_RATE,0) as LOSS_RATE,LEAD_TIME,DESCRIPTION
+     FROM (SELECT CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE,NET_AMOUNT
+           FROM BOM
+           START WITH parent_item_code = 'NULL' AND ITEM_CODE='DK-01'--C_MPS.itemcode
+           CONNECT BY PRIOR item_code=parent_item_code) b, ITEM i
+     WHERE b.item_code=i.item_code))
+     LOOP
+      v_mps_no:= r_mps.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+      v_order_date:=c_req_date.req_date;
+      v_required_date:=r_mrp.ORDER_DATE+r_mrp.LEAD_TIME;
+      v_plan_amount:=r_mps.MPS_PLAN_AMOUNT;
+      v_total_loss_rate:=r_mrp.LOSS_RATE;
+      v_caculated_amount:=r_mps.MPS_PLAN_AMOUNT*r_mrp.NET_AMOUNT*(1+R_MRP.LOSS_RATE);
+      v_required_amount:=CEIL(r_mps.MPS_PLAN_AMOUNT*r_mrp.NET_AMOUNT*(1+R_MRP.LOSS_RATE));
+      v_unit_of_mrp:=r_mrp.UNIT_OF_STOCK;
+      
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+   
+                          );
+                    
+             END LOOP;
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '기타 에러가 발생했습니다.';
+END;
+/
+
+
+프로시저 제일 최신!!!!
+===========================================================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    VARCHAR2( 100 ) ;
+v_order_date    VARCHAR2( 100 ) ; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --루프 돌기전 커서로 뽑아올값
+SELECT M.mps_NO,BOM_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,DUE_DATE_OF_MPS,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+(SELECT root_code,BOM_NO,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code, CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH parent_item_code = 'NULL'--v_itemcode
+CONNECT BY PRIOR item_code=parent_item_code) b,
+ITEM i
+WHERE bi_item_code=i.item_code) bi,(SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)) M
+WHERE M.ITEM_CODE=bi.root_code;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+  SELECT TO_CHAR( TO_DATE(r_mrp.DUE_DATE_OF_MPS, 'YYYY-MM-DD') - r_mrp.sum_lead_time, 'YYYY-MM-DD') INTO v_order_date
+   FROM DUAL;
+  
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+      SELECT t_loss_rate INTO v_total_loss_rate FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+LOSS_RATE)) over(ORDER BY LEV DESC))-1,3) t_loss_rate FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= v_item_code-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE= v_item_code; -- BI _ITEM_CODE
+       
+      v_caculated_amount:=v_plan_amount*(1+v_total_loss_rate);
+      v_required_amount:=CEIL(v_plan_amount*(1+v_total_loss_rate));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '기타 에러가 발생했습니다.';
+END;
+
+
+최종프로시저 11-05 11:24PM
+===========================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    NVARCHAR2( 100 ) ;
+v_order_date    DATE; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --루프 돌기전 커서로 뽑아올값
+SELECT M.mps_NO,BOM_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,DUE_DATE_OF_MPS,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+(SELECT root_code,BOM_NO,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code, CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH parent_item_code = 'NULL'
+CONNECT BY PRIOR item_code=parent_item_code) b,
+ITEM i
+WHERE bi_item_code=i.item_code) bi,(SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT V_MPS_LIST_NO FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)) M
+WHERE M.ITEM_CODE=bi.root_code;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+
+        v_order_date:= TO_DATE(r_mrp.DUE_DATE_OF_MPS, 'YYYY-MM-DD') - r_mrp.sum_lead_time;
+
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+    FOR r_loss_rate IN(SELECT t_loss_rate FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= r_mrp.BI_ITEM_CODE-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE= v_item_code) -- BI _ITEM_CODE
+         LOOP
+     v_total_loss_rate := TO_CHAR(r_loss_rate.t_loss_rate,'FM9990.999');
+      END LOOP;
+      v_caculated_amount:=TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate));
+      v_required_amount:=CEIL(TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate)));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+           error_msg := sqlerrm;
+END;
+
+
+최종 커서
+============================================
+rn,M.ITEM_CODE || ' -' || TO_CHAR(r, '000') AS BOM_NO,
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,DUE_DATE_OF_MPS,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(SELECT ROWNUM rn,CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH parent_item_code = 'NULL'  
+CONNECT BY PRIOR item_code=parent_item_code
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi,(SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn
+
+
+
+진짜 최종프로시저 
+===================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    NVARCHAR2( 100 ) ;
+v_order_date    DATE; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --루프 돌기전 커서로 뽑아올값
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,DUE_DATE_OF_MPS,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(SELECT ROWNUM rn,CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH parent_item_code = 'NULL'  
+CONNECT BY PRIOR item_code=parent_item_code
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi,(SELECT MPS_NO,ITEM_CODE,MPS_PLAN_AMOUNT,DUE_DATE_OF_MPS
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018110501,PS2018110201,PS2018110202' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+
+        v_order_date:= TO_DATE(r_mrp.DUE_DATE_OF_MPS, 'YYYY-MM-DD') - r_mrp.sum_lead_time;
+
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+    FOR r_loss_rate IN(SELECT t_loss_rate FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= r_mrp.BI_ITEM_CODE-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE= v_item_code) -- BI _ITEM_CODE
+         LOOP
+     v_total_loss_rate := TO_CHAR(r_loss_rate.t_loss_rate,'FM9990.999');
+      END LOOP;
+      v_caculated_amount:=TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate));
+      v_required_amount:=CEIL(TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate)));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+           error_msg := sqlerrm;
+END;
+
+
+반제품도 되는 진짜 최종 프로시저
+============================================================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    NVARCHAR2( 100 ) ;
+v_order_date    DATE; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --루프 돌기전 커서로 뽑아올값
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,SCHEDULED_END_DATE,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+
+ (SELECT MPS_NO,MPS.ITEM_CODE,MPS_PLAN_AMOUNT,SCHEDULED_END_DATE
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT V_MPS_LIST_NO FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M,
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(
+SELECT ROWNUM rn,root_code,bi_item_code,NET_AMOUNT
+FROM
+((SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH PARENT_ITEM_CODE ='NULL'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP01'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP02'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code))
+
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+
+        v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time;
+
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+    FOR r_loss_rate IN(SELECT t_loss_rate FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= r_mrp.BI_ITEM_CODE-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE= v_item_code) -- BI _ITEM_CODE
+         LOOP
+     v_total_loss_rate := TO_CHAR(r_loss_rate.t_;loss_rate,'FM9990.999');
+      END LOOP;
+      v_caculated_amount:=TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate));
+      v_required_amount:=CEIL(TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate)));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+           error_msg := sqlerrm;
+END;
+
+
+최종 커서
+=============================================
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,SCHEDULED_END_DATE,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+
+ (SELECT MPS_NO,MPS.ITEM_CODE,MPS_PLAN_AMOUNT,SCHEDULED_END_DATE
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT 'PS2018111401,PS2018111402' FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M,
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(
+SELECT ROWNUM rn,root_code,bi_item_code,NET_AMOUNT
+FROM
+((SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH PARENT_ITEM_CODE ='NULL'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP01'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP02'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code))
+
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn
+
+반제품 발주일자 소요일자 계산 다시 한거 진짜진짜 최종 프로시저
+=====================================================================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------임시테이블 넣을 변수들
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    NVARCHAR2( 100 ) ;
+v_order_date    DATE; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --커서
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,SCHEDULED_END_DATE,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+
+ (SELECT MPS_NO,MPS.ITEM_CODE,MPS_PLAN_AMOUNT,SCHEDULED_END_DATE
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT V_MPS_LIST_NO FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M,
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(
+SELECT ROWNUM rn,root_code,bi_item_code,NET_AMOUNT
+FROM
+((SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH PARENT_ITEM_CODE ='NULL'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP01'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP02'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code))
+
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+
+IF r_mrp.item_code='DK-AP01' THEN  v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time +1;
+ELSIF r_mrp.item_code='DK-AP02' THEN v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time +1;
+ELSE v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time;
+END IF;
+
+
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+    FOR r_loss_rate IN(SELECT t_loss_rate FROM
+(SELECT LEV,B.ITEM_CODE,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate FROM
+(SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV
+          FROM BOM
+         START WITH ITEM_CODE= r_mrp.BI_ITEM_COdlrp wnDE-- BI _ITEM_CODE
+         CONNECT BY PRIOR ITEM_CODE=PARENT_ITEM_CODE
+        ) B, ITEM I
+        WHERE B.ITEM_CODE=I.ITEM_CODE) accumulate_loss_rate
+       WHERE accumulate_loss_rate.ITEM_CODE= v_item_code) -- BI _ITEM_CODE
+         LOOP
+     v_total_loss_rate := TO_CHAR(r_loss_rate.t_loss_rate,'FM9990.999');
+      END LOOP;
+      v_caculated_amount:=TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate));
+      v_required_amount:=CEIL(TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate)));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+           error_msg := sqlerrm;
+END;
+
+
+누적 손실률 진짜 제대로된거 - 부모로 부터 내려가는거
+===============================================
+SELECT t_loss_rate 
+  FROM
+       (SELECT lev, B.ITEM_CODE 
+       ,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate 
+         FROM (SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV 
+                FROM BOM 
+                START  WITH ITEM_CODE= 'LN-01'-- BI _ITEM_CODE 
+                CONNECT BY PRIOR PARENT_ITEM_CODE=ITEM_CODE
+                 )B, ITEM I 
+           WHERE B.ITEM_CODE=I.ITEM_CODE 
+          ) 
+    WHERE LEV=1 
+
+누적손실률 진짜 제대로 된거 포함한 프로시저
+============================================
+create or replace PROCEDURE P_MRP_OPEN 
+       (
+           V_MPS_LIST_NO IN VARCHAR2
+         , --MPS번호
+           ERROR_CODE OUT NUMBER
+         , --에러코드
+           ERROR_MSG OUT VARCHAR2
+         , --에러메세지
+           RESULT OUT SYS_REFCURSOR --결과 값 반환 커서
+       )
+   IS
+
+
+-----------------커서변수 지정
+v_mps_no  VARCHAR2(100) ;
+v_bom_no   VARCHAR2(100) ;
+v_item_classification   VARCHAR2(100) ; 
+v_item_code  VARCHAR2(100) ;
+v_item_name    NVARCHAR2( 100 ) ;
+v_order_date    DATE; 
+v_required_date    VARCHAR2( 100 ) ; 
+v_plan_amount  VARCHAR2( 100 ) ;
+v_total_loss_rate VARCHAR2( 100 ) ;
+v_caculated_amount VARCHAR2( 100 ) ;
+v_required_amount  VARCHAR2( 100 ) ;
+v_unit_of_mrp VARCHAR2( 100 ) ;
+
+
+
+
+       CURSOR C_MRP IS            --루프 돌기전 커서로 뽑아올값
+SELECT M.item_Code||'-'||TO_CHAR(ROW_NUMBER()OVER(ORDER BY M.mps_no ), '000') AS BOM_NO,M.mps_NO,bi_item_code,ITEM_CLASSIFICATION,M.ITEM_CODE ,NET_AMOUNT,ITEM_NAME,SCHEDULED_END_DATE,M.MPS_PLAN_AMOUNT,
+UNIT_OF_STOCK,NVL(LOSS_RATE,0),LEAD_TIME,(WITH  sum_lead as(SELECT bb.item_CODE it,bb.PARENT_ITEM_CODE pt,ii.lead_time lt FROM ITEM ii,BOM bb WHERE bb.item_code=ii.item_code)
+SELECT SUM(lt) 
+FROM sum_lead
+ START WITH it =bi_item_code 
+ CONNECT BY PRIOR pt = it) sum_lead_time 
+from
+
+ (SELECT MPS_NO,MPS.ITEM_CODE,MPS_PLAN_AMOUNT,SCHEDULED_END_DATE
+FROM mps
+WHERE MPS_NO                      -- V_MPS_LIST_NO
+in(WITH MPS_NO_STR AS ( SELECT V_MPS_LIST_NO FROM DUAL ) ,
+
+MPS_NO_LIST AS (
+	SELECT TRIM( REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) ,'[^,]+', 1, LEVEL ) ) AS MPS_NO FROM DUAL 
+	CONNECT BY REGEXP_SUBSTR( (SELECT * FROM MPS_NO_STR ) , '[^,]+', 1, LEVEL ) IS NOT NULL
+) 
+SELECT * FROM MPS_NO_LIST)
+ORDER BY MPS_NO
+) M,
+(SELECT rn, root_code,ITEM_CLASSIFICATION,bi_item_code,NET_AMOUNT,LEAD_TIME,LOSS_RATE,UNIT_OF_STOCK,ITEM_NAME
+from
+(
+SELECT ROWNUM rn,root_code,bi_item_code,NET_AMOUNT
+FROM
+((SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH PARENT_ITEM_CODE ='NULL'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP01'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code)
+UNION ALL
+(SELECT CONNECT_BY_ROOT ITEM_CODE AS root_code,ITEM_CODE AS bi_item_code,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE ='DK-AP02'  --MPS.ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code))
+
+ ) b,
+ITEM i
+WHERE bi_item_code=i.item_code
+) bi
+WHERE M.ITEM_CODE=bi.root_code
+ORDER BY m.mps_no,rn;
+
+BEGIN
+
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR r_mrp IN C_MRP LOOP
+  
+      v_mps_no:= r_mrp.MPS_NO;
+      v_bom_no:= r_mrp.BOM_NO;
+      IF r_mrp.ITEM_CLASSIFICATION='IT-CI' THEN v_item_classification:='완제품';
+      ELSIF r_mrp.ITEM_CLASSIFICATION='IT-SI' THEN v_item_classification:='반제품';
+      ELSE v_item_classification:= '원재료';
+      END IF;
+      v_item_code:=r_mrp.BI_ITEM_CODE;
+      v_item_name:=r_mrp.ITEM_NAME;
+  
+
+IF r_mrp.item_code='DK-AP01' THEN  v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time +1;
+ELSIF r_mrp.item_code='DK-AP02' THEN v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time +1;
+ELSE v_order_date:= TO_DATE(r_mrp.SCHEDULED_END_DATE, 'YYYY-MM-DD') - r_mrp.sum_lead_time;
+END IF;
+
+
+
+
+     v_required_date:=v_order_date+r_mrp.LEAD_TIME;
+     v_plan_amount:=r_mrp.NET_AMOUNT*r_mrp.MPS_PLAN_AMOUNT;
+    
+    FOR r_loss_rate IN(SELECT t_loss_rate 
+  FROM
+       (SELECT lev, B.ITEM_CODE 
+       ,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate 
+         FROM (SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV 
+                FROM BOM 
+                START  WITH ITEM_CODE= v_item_code-- BI _ITEM_CODE 
+                CONNECT BY PRIOR PARENT_ITEM_CODE=ITEM_CODE
+                 )B, ITEM I 
+           WHERE B.ITEM_CODE=I.ITEM_CODE 
+          ) 
+    WHERE LEV=1 ) -- BI _ITEM_CODE
+         LOOP
+     v_total_loss_rate := TO_CHAR(r_loss_rate.t_loss_rate,'FM9990.999');
+      END LOOP;
+      v_caculated_amount:=TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate));
+      v_required_amount:=CEIL(TO_NUMBER(v_plan_amount)*(1+TO_NUMBER(v_total_loss_rate)));
+      v_unit_of_mrp :=r_mrp.UNIT_OF_STOCK;
+
+     INSERT INTO MRP_OPEN_TEMP VALUES
+                           (v_mps_no,
+                            v_bom_no,
+                            v_item_classification,
+                            v_item_code,
+                            v_item_name,
+                            v_order_date, 
+                            v_required_date,
+                            v_plan_amount,
+                            v_total_loss_rate,
+                            v_caculated_amount,
+                            v_required_amount,
+                            v_unit_of_mrp
+
+                          );
+
+             END LOOP;
+          COMMIT;
+          OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+      EXCEPTION
+      WHEN no_data_found THEN
+          COMMIT;
+          ERROR_CODE := -1;
+          error_msg := '조회할 데이터가 없습니다.';
+      WHEN OTHERS THEN
+          COMMIT;
+          ERROR_CODE := -1;
+           error_msg := sqlerrm;
+END;
+
+
+
+
+
+에러메세지 보는 거
+================
+ error_msg := sqlerrm;

@@ -1,0 +1,20 @@
+create or replace function      f_sum_lead_time( ci_code  varchar2)
+return varchar2
+is
+V_SUM_LEAD_TIME   varchar2(10);
+begin
+FOR r_sum_lead_time IN( SELECT SUM(lt) as sum_lead_time
+           FROM (SELECT b.item_CODE it
+                     ,b.PARENT_ITEM_CODE pt
+                     ,i.lead_time lt
+                  FROM ITEM i
+                     ,BOM b
+                 WHERE b.item_code=i.item_code
+                )
+           START WITH it =ci_code --item code
+           CONNECT BY PRIOR pt = it  )
+LOOP
+V_SUM_LEAD_TIME   := r_sum_lead_time .sum_lead_time;
+END LOOP;
+return V_SUM_LEAD_TIME  ;
+end;

@@ -1,0 +1,23 @@
+create or replace function      f_total_loss_rate( PI_CODE VARCHAR2)
+  RETURN  VARCHAR2
+is
+V_TOTAL_LOSS_RATE    ITEM.LOSS_RATE%TYPE; --누적손실율
+begin
+FOR r_loss_rate IN(SELECT t_loss_rate 
+  FROM
+       (SELECT lev, B.ITEM_CODE 
+       ,ROUND(EXP( SUM(LN(1+NVL(LOSS_RATE,0))) over(ORDER BY LEV DESC))-1,3) t_loss_rate 
+         FROM (SELECT ITEM_CODE,PARENT_ITEM_CODE,LEVEL AS LEV 
+                FROM BOM 
+                START  WITH ITEM_CODE= PI_CODE-- BI _ITEM_CODE 
+                CONNECT BY PRIOR PARENT_ITEM_CODE=ITEM_CODE
+                 )B, ITEM I 
+           WHERE B.ITEM_CODE=I.ITEM_CODE 
+          ) 
+    WHERE LEV=1 ) -- BI _ITEM_CODE
+         LOOP
+     V_TOTAL_LOSS_RATE := TO_CHAR(r_loss_rate.t_loss_rate,'FM9990.999');
+
+      END LOOP;
+ return V_TOTAL_LOSS_RATE ;
+END;

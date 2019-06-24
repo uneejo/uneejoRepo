@@ -1,0 +1,46 @@
+import java.util.*;
+import java.lang.reflect.*;
+
+class Member{
+	String id,pw,addr,tel;
+	void setId(String id){ this.id=id;  }
+	void setPw(String pw){ this.pw=pw;  }
+	void setAddr(String addr){ this.addr=addr;  }
+	void setTel(String tel){ this.tel=tel;  }
+	String getId(){ return id; }
+	String getPw(){ return pw; }
+	String getAddr(){ return addr; }
+	String getTel(){ return tel; }
+}
+class A{
+	public static void main(String args[]) throws Exception{
+		HashMap<String,String> map=new HashMap<>();
+		map.put("id","aa");
+		map.put("pw","bb");
+		map.put("addr","cc");
+		map.put("tel","dd");
+
+		Class<Member> o=Member.class;
+		Member member=new Member();
+		Set<String> a=map.keySet();
+		for(String b:a)
+		{String c=b.substring(0,1).toUpperCase()+b.substring(1);
+		Method mm=o.getDeclaredMethod("set"+c,String.class);
+		mm.invoke(member,map.get(b));
+		}
+		
+		
+		/*
+Member member=new Member();
+member.setId(map.get("id"));
+member.setPw(map.get("pw"));
+member.setAddr(map.get("addr"));
+member.setTel(map.get("tel"));
+*/
+
+		System.out.println(member.getId());
+		System.out.println(member.getPw());
+		System.out.println(member.getAddr());
+		System.out.println(member.getTel());
+	}
+}

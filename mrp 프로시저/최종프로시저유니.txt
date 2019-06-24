@@ -1,0 +1,161 @@
+create or replace PROCEDURE  P_MRP_OPEN -- 프로시저명
+       (  V_MPS_NO IN VARCHAR2 -- MRP 진행할 MPS넘버
+         , ERROR_CODE OUT NUMBER -- 에러코드
+         , ERROR_MSG OUT VARCHAR2 -- 에러메세지
+         , RESULT OUT SYS_REFCURSOR -- 결과 값 반환 커서
+       )
+   IS
+
+--***************************************************
+-- MRP_OPEN_TEMP Table 변수
+--***************************************************
+V_ITEM_CLASSIFICATION MRP_OPEN_TEMP.ITEM_CLASSIFICATION%TYPE; --품목분류코드 
+V_ORDER_DATE         DATE; --발주일자
+V_REQUIRED_DATE       DATE; --소요일자
+V_PLAN_AMOUNT MRP_OPEN_TEMP.PLAN_AMOUNT%TYPE;
+V_TOTAL_LOSS_RATE     VARCHAR2(100); --누적손실율
+V_CACULATED_AMOUNT    MRP_OPEN_TEMP.CACULATED_AMOUNT%TYPE;-- 계산수량
+V_REQUIRED_AMOUNT     MRP_OPEN_TEMP.REQUIRED_AMOUNT%TYPE; --필요수량
+
+
+--***************************************************
+-- MPS Table 변수
+--***************************************************
+
+V_MPS_ITEM_CODE MPS.ITEM_CODE%TYPE; --품목코드
+V_MPS_PLAN_AMOUNT         MPS.MPS_PLAN_AMOUNT%TYPE; --mps계획수량
+V_MPS_SCHEDULED_END_DATE      MPS.SCHEDULED_END_DATE%TYPE; --예정마감일자
+
+
+
+CURSOR C_BOM_LIST--커서 시작
+IS
+
+    (SELECT 
+          BOM_NO
+          ,ITEM_CODE
+          ,NET_AMOUNT
+          ,item_name
+          ,ITEM_CLASSIFICATION
+          ,UNIT_OF_STOCK
+          ,LOSS_RATE
+          ,LEAD_TIME
+      FROM
+        (SELECT BOM_NO,b.ITEM_CODE AS ITEM_CODE,NET_AMOUNT,LPAD(' ',8*(lvl-1))||ITEM_NAME AS item_name,ITEM_CLASSIFICATION,UNIT_OF_STOCK,LOSS_RATE,LEAD_TIME
+from
+(SELECT LEVEL lvl,CONNECT_BY_ROOT ITEM_CODE || ' -' || TO_CHAR(ROWNUM, '000') AS BOM_NO,ITEM_CODE,NET_AMOUNT
+FROM BOM
+START WITH ITEM_CODE=V_MPS_ITEM_CODE--V_MPS_ITEM_CODE
+CONNECT BY PRIOR item_code=parent_item_code) b,
+ITEM i
+WHERE b.item_code=i.item_code));
+
+BEGIN
+
+    BEGIN
+        SELECT 
+              ITEM_CODE
+             , MPS_PLAN_AMOUNT
+             , SCHEDULED_END_DATE
+        INTO 
+              V_MPS_ITEM_CODE
+             , V_MPS_PLAN_AMOUNT
+             , V_MPS_SCHEDULED_END_DATE
+          FROM MPS
+         WHERE MPS_NO = V_MPS_NO;
+    EXCEPTION
+    WHEN OTHERS THEN
+        ERROR_CODE := '0';
+        ERROR_MSG := 'CONTINUE PROCEDURE';
+    END;
+
+-- *****************************************************************************
+-- 정전개 리스트 개수만큼 반복
+-- *****************************************************************************
+    DELETE mrp_open_temp; --결과 값을 저장하게 될 임시 테이블 내용을 리셋 !!!
+    COMMIT;
+    FOR BOM_LIST IN C_BOM_LIST
+
+    LOOP
+
+--**********************************************
+--품목코드를 품목분류로 변환
+--**********************************************
+    
+      IF BOM_LIST.ITEM_CLASSIFICATION='IT-CI' THEN V_ITEM_CLASSIFICATION:='완제품';
+      ELSIF BOM_LIST.ITEM_CLASSIFICATION='IT-SI' THEN V_ITEM_CLASSIFICATION:='반제품';
+      ELSE V_ITEM_CLASSIFICATION:= '원재료';
+      END IF;
+    
+
+    
+--**********************************************
+--손실율 계산
+--**********************************************
+
+     V_TOTAL_LOSS_RATE := f_total_loss_rate(BOM_LIST.ITEM_CODE);  --손실률 function
+
+--**********************************************
+--계획수량,계산수량,필요수량 계산
+--**********************************************
+
+        V_PLAN_AMOUNT:=V_MPS_PLAN_AMOUNT * BOM_LIST.NET_AMOUNT;
+        V_CACULATED_AMOUNT := V_PLAN_AMOUNT * (1+V_TOTAL_LOSS_RATE);
+        V_REQUIRED_AMOUNT := CEIL(V_CACULATED_AMOUNT);
+
+
+--**********************************************
+--ORDER_Date 계산
+--**********************************************
+        V_ORDER_DATE := TO_DATE(V_MPS_SCHEDULED_END_DATE,'YYYY-MM-DD') - f_sum_lead_time(BOM_LIST.ITEM_CODE); --리드타임 function
+
+--**********************************************
+--REQUIRED_DATE 계산
+--**********************************************
+       V_REQUIRED_DATE := V_ORDER_DATE + BOM_LIST.LEAD_TIME;
+
+--**********************************************
+--MRP_OPEN_TEMP 임시테이블에 저장
+--**********************************************
+
+           INSERT INTO MRP_OPEN_TEMP VALUES
+                  (  V_MPS_NO
+                    , BOM_LIST.BOM_NO
+                    ,V_ITEM_CLASSIFICATION
+                    , BOM_LIST.ITEM_CODE
+                    , BOM_LIST.ITEM_NAME 
+                    , V_ORDER_DATE
+                    , V_REQUIRED_DATE
+                    , V_PLAN_AMOUNT
+                    , V_TOTAL_LOSS_RATE
+                    , V_CACULATED_AMOUNT  
+                    , V_REQUIRED_AMOUNT 
+                    , BOM_LIST.UNIT_OF_STOCK
+
+                  )
+                  ;
+
+       END LOOP;
+
+       COMMIT;
+       ERROR_CODE := '0';
+       ERROR_MSG := 'SUCCESS';
+       OPEN RESULT FOR SELECT * FROM MRP_OPEN_TEMP;
+   EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+       DBMS_OUTPUT.PUT_LINE('NO_DATA_FOUND');
+       ERROR_CODE := '-1';
+
+       ERROR_MSG := 'NO_DATA_FOUND';
+       RETURN;
+   WHEN DUP_VAL_ON_INDEX THEN
+       DBMS_OUTPUT.PUT_LINE('DUP_VAL_ON_INDEX');
+       ERROR_CODE := '-1';
+       ERROR_MSG := 'DUP_VAL_ON_INDEX';
+       RETURN;
+   WHEN OTHERS THEN
+       DBMS_OUTPUT.PUT_LINE('OTHERS');
+       ERROR_CODE := '-1';
+       ERROR_MSG := 'OTHERS';
+       RETURN;
+   END P_MRP_OPEN;

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQLMap 2.0//EN"
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="company">
+
+<typeAlias alias="companyTO" type="com.project.uniproduct.basicInfo.to.CompanyTO"/>
+
+<resultMap id="companyResult" class="companyTO">
+
+   <result property="companyTelNumber" column="COMPANY_TEL_NUMBER" />
+   <result property="companyDivision" column="COMPANY_DIVISION" />
+   <result property="companyBasicAddress" column="COMPANY_BASIC_ADDRESS" />
+   <result property="companyOpenDate" column="COMPANY_OPEN_DATE" />
+   <result property="companyBusinessItems" column="COMPANY_BUSINESS_ITEMS" />
+   <result property="businessLicenseNumber" column="BUSINESS_LICENSE_NUMBER" />
+   <result property="companyName" column="COMPANY_NAME" />
+   <result property="companyDetailAddress" column="COMPANY_DETAIL_ADDRESS" />
+   <result property="companyFaxNumber" column="COMPANY_FAX_NUMBER" />
+   <result property="companyCeoName" column="COMPANY_CEO_NAME" />
+   <result property="companyEstablishmentDate" column="COMPANY_ESTABLISHMENT_DATE" />
+   <result property="companyCode" column="COMPANY_CODE" />
+   <result property="homepage" column="HOMEPAGE" />
+   <result property="corporationLicenseNumber" column="CORPORATION_LICENSE_NUMBER" />
+   <result property="companyBusinessConditions" column="COMPANY_BUSINESS_CONDITIONS" />
+   <result property="companyZipCode" column="COMPANY_ZIP_CODE" />
+
+</resultMap>
+
+<cacheModel id="companyCache" type="LRU" readOnly="true" serialize="false">
+    <flushInterval hours="24"/>
+    <property name="cache-size" value="100" /> 
+    <flushOnExecute statement="insertCompany"/>
+    <flushOnExecute statement="updateCompany"/>
+    <flushOnExecute statement="deleteCompany"/>
+</cacheModel>
+
+
+<select id="selectCompanyList" resultMap="companyResult" cacheModel="companyCache">
+SELECT * FROM COMPANY ORDER BY COMPANY_CODE
+</select>
+
+<insert id="insertCompany" parameterClass="companyTO">
+Insert into COMPANY (
+         COMPANY_CODE 
+       , COMPANY_NAME 
+       , COMPANY_DIVISION 
+       , BUSINESS_LICENSE_NUMBER 
+       , CORPORATION_LICENSE_NUMBER 
+       , COMPANY_CEO_NAME 
+       , COMPANY_BUSINESS_CONDITIONS 
+       , COMPANY_BUSINESS_ITEMS 
+       , COMPANY_ZIP_CODE 
+       , COMPANY_BASIC_ADDRESS 
+       , COMPANY_DETAIL_ADDRESS 
+       , COMPANY_TEL_NUMBER 
+       , COMPANY_FAX_NUMBER 
+       , COMPANY_ESTABLISHMENT_DATE 
+       , COMPANY_OPEN_DATE 
+       , HOMEPAGE) 
+       values ( #companyCode:VARCHAR# 
+              , #companyName:NVARCHAR# 
+              , #companyDivision:NCHAR#
+              , #businessLicenseNumber:VARCHAR# 
+              , #corporationLicenseNumber:VARCHAR# 
+              , #companyCeoName:NVARCHAR# 
+              , #companyBusinessConditions:NVARCHAR# 
+              , #companyBusinessItems:NVARCHAR# 
+              , #companyZipCode:VARCHAR# 
+              , #companyBasicAddress:NVARCHAR# 
+              , #companyDetailAddress:NVARCHAR# 
+              , #companyTelNumber:VARCHAR# 
+              , #companyFaxNumber:VARCHAR# 
+              , #companyEstablishmentDate:VARCHAR# 
+              , #companyOpenDate:VARCHAR#
+		      , #homepage:VARCHAR# )
+		      
+</insert>
+
+<update id="updateCompany" parameterClass="companyTO">
+UPDATE COMPANY SET  COMPANY_NAME = #companyName:NVARCHAR# 
+                  , COMPANY_DIVISION = #companyDivision:NCHAR# 
+                  , BUSINESS_LICENSE_NUMBER = #businessLicenseNumber:VARCHAR# 
+                  , CORPORATION_LICENSE_NUMBER = #corporationLicenseNumber:VARCHAR# 
+                  , COMPANY_CEO_NAME = #companyCeoName:NVARCHAR# 
+                  , COMPANY_BUSINESS_CONDITIONS = #companyBusinessConditions:NVARCHAR# 
+                  , COMPANY_BUSINESS_ITEMS = #companyBusinessItems:NVARCHAR# 
+                  , COMPANY_ZIP_CODE = #companyZipCode:VARCHAR# 
+                  , COMPANY_BASIC_ADDRESS = #companyBasicAddress:NVARCHAR#
+			      , COMPANY_DETAIL_ADDRESS = #companyDetailAddress:NVARCHAR# 
+			      , COMPANY_TEL_NUMBER = #companyTelNumber:VARCHAR# 
+			      , COMPANY_FAX_NUMBER = #companyFaxNumber:VARCHAR#
+			      , COMPANY_ESTABLISHMENT_DATE = #companyEstablishmentDate:VARCHAR#
+                  , COMPANY_OPEN_DATE = #companyOpenDate:VARCHAR# 
+                  , HOMEPAGE = #homepage:VARCHAR#
+			  WHERE COMPANY_CODE = #companyCode:VARCHAR#
+			 
+</update>
+
+<delete id="deleteCompany" parameterClass="companyTO">
+DELETE FROM COMPANY WHERE COMPANY_CODE = #companyCode#
+</delete>
+
+</sqlMap>

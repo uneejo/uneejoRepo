@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+
+	<bean id="beanNameViewResolver"
+		class="org.springframework.web.servlet.view.BeanNameViewResolver">
+		<property name="order" value="0" />
+
+	</bean>
+
+
+	<bean id="urlFilenameViewController"
+		class="org.springframework.web.servlet.mvc.UrlFilenameViewController" />
+
+
+	<bean id="parameterMethodNameResolver"
+		class="org.springframework.web.servlet.mvc.multiaction.ParameterMethodNameResolver">
+		<property name="paramName" value="method" />
+
+	</bean>
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize" value="100000000" />
+		<property name="maxInMemorySize" value="100000000" />
+
+	</bean>
+
+	<bean id="jsonMapper"
+		class="com.fasterxml.jackson.databind.ObjectMapper" />
+
+	<bean id="jsonView"
+		class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+		<property name="objectMapper" ref="jsonMapper" />
+		<property name="contentType"
+			value="application/json; charset=UTF-8" />
+	</bean>
+
+	<bean id="estimatePdfView"
+		class="org.springframework.web.servlet.view.jasperreports.JasperReportsMultiFormatView">
+
+		<property name="url" value="/resources/iReportForm/Estimate.jrxml" />
+		<property name="reportDataKey" value="source" />
+
+	</bean>
+
+
+	<bean id="contractPdfView"
+		class="org.springframework.web.servlet.view.jasperreports.JasperReportsMultiFormatView">
+
+		<property name="url" value="/resources/iReportForm/Contract.jrxml" />
+		<property name="reportDataKey" value="source" />
+
+	</bean>
+
+
+	<!-- <bean id="xlsView" p:url="/report/empReport_excel.jrxml" p:reportDataKey="source" 
+		class="org.springframework.web.servlet.view.jasperreports.JasperReportsMultiFormatView"/> -->
+
+</beans>

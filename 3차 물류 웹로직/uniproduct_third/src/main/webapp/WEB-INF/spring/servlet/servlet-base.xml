@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+		
+		<bean id="baseUrlHandlerMapping"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="order" value="1" />
+		<property name="alwaysUseFullPath" value="false" />
+		<property name="mappings">
+			<props>
+             <prop key="/codeList.do">codeController</prop> 
+             <prop key="/searchCodeList.do">codeController</prop>  
+             <prop key="/checkCodeDuplication">codeController</prop>  
+             <prop key="/batchListProcess.do">codeController</prop>  
+             <prop key="/changeCodeUseCheckProcess.do">codeController</prop> 
+             
+                <prop key="/searchAddressList.do">addressController</prop>  
+                
+                <prop key="/imgFileUpload.do">imgFileController</prop>  
+                <prop key="/report.html">reportController</prop>        
+			</props>
+		</property>
+	</bean>
+
+
+<bean id="baseViewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/views/base/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+   <bean id="codeController"
+		class="com.project.uniproduct.base.controller.CodeController"
+		p:cacheSeconds="0" >
+		<property name="baseSF" ref="baseServiceFacadeImpl" />
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+
+ <bean id="addressController"
+		class="com.project.uniproduct.base.controller.AddressController"
+		p:cacheSeconds="0" >
+		<property name="baseSF" ref="baseServiceFacadeImpl" />
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+	
+ <bean id="imgFileController"
+		class="com.project.uniproduct.base.controller.ImgFileController"
+		p:cacheSeconds="0" >
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+	
+	 <bean id="reportController"
+		class="com.project.uniproduct.base.controller.ReportController"
+		p:cacheSeconds="0" >
+		<property name="baseSF" ref="baseServiceFacadeImpl" />
+		<property name="methodNameResolver" ref="parameterMethodNameResolver" />
+	</bean>
+	
+	
+		</beans>

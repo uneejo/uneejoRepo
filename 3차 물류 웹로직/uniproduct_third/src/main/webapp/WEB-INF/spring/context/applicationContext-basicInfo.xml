@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+    <bean id="companyDAOImpl"
+		class="com.project.uniproduct.basicInfo.dao.CompanyDAOImpl"
+		parent="iBatisSupportDao">
+		
+	</bean>
+
+	<bean id="customerDAOImpl"
+		class="com.project.uniproduct.basicInfo.dao.CustomerDAOImpl"
+		parent="iBatisSupportDao">
+	
+	</bean>
+
+	<bean id="departmentDAOImpl"
+		class="com.project.uniproduct.basicInfo.dao.DepartmentDAOImpl"
+		parent="iBatisSupportDao">
+	
+	</bean>
+
+	<bean id="financialAccountAssociatesDAOImpl"
+		class="com.project.uniproduct.basicInfo.dao.FinancialAccountAssociatesDAOImpl"
+		parent="iBatisSupportDao">
+	
+	</bean>
+
+	<bean id="workplaceDAOImpl"
+		class="com.project.uniproduct.basicInfo.dao.WorkplaceDAOImpl"
+		parent="iBatisSupportDao">
+	
+	</bean>
+
+	<bean id="companyApplicationServiceImpl"
+		class="com.project.uniproduct.basicInfo.applicationService.CompanyApplicationServiceImpl">
+		<property name="companyDAO" ref="companyDAOImpl" />
+		<property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+	</bean>
+
+	<bean id="customerApplicationServiceImpl"
+		class="com.project.uniproduct.basicInfo.applicationService.CustomerApplicationServiceImpl">
+		<property name="customerDAO" ref="customerDAOImpl" />
+		<property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+	</bean>
+
+	<bean id="departmentApplicationServiceImpl"
+		class="com.project.uniproduct.basicInfo.applicationService.DepartmentApplicationServiceImpl">
+		<property name="deptDAO" ref="departmentDAOImpl" />
+		<property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+	</bean>
+
+	<bean id="financialAccountAssociatesApplicationServiceImpl"
+		class="com.project.uniproduct.basicInfo.applicationService.FinancialAccountAssociatesApplicationServiceImpl">
+		<property name="associatesDAO" ref="financialAccountAssociatesDAOImpl" />
+		<property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+	</bean>
+
+	<bean id="workplaceApplicationServiceImpl"
+		class="com.project.uniproduct.basicInfo.applicationService.WorkplaceApplicationServiceImpl">
+		<property name="workplaceDAO" ref="workplaceDAOImpl" />
+		<property name="codeDetailDAO" ref="codeDetailDAOImpl" />
+	</bean>
+
+	<bean id="cooperatorServiceFacadeImpl"
+		class="com.project.uniproduct.basicInfo.serviceFacade.CooperatorServiceFacadeImpl">
+		<property name="customerAS" ref="customerApplicationServiceImpl" />
+		<property name="associatsAS" ref="financialAccountAssociatesApplicationServiceImpl" />
+	</bean>
+
+	<bean id="organizationServiceFacadeImpl"
+		class="com.project.uniproduct.basicInfo.serviceFacade.OrganizationServiceFacadeImpl">
+		<property name="companyAS" ref="companyApplicationServiceImpl" />
+		<property name="workplaceAS" ref="workplaceApplicationServiceImpl" />
+		<property name="deptAS" ref="departmentApplicationServiceImpl" />
+	</bean>
+
+
+	
+
+
+</beans>

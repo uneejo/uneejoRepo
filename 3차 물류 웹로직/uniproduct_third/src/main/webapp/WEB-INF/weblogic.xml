@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<weblogic-web-app xmlns="http://xmlns.oracle.com/weblogic/weblogic-web-app" xmlns:j2ee="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd http://xmlns.oracle.com/weblogic/weblogic-web-app http://xmlns.oracle.com/weblogic/weblogic-web-app/1.7/weblogic-web-app.xsd">
+<context-root>uniproduct_third</context-root>
+<session-descriptor>
+    <timeout-secs>7200</timeout-secs>
+</session-descriptor>
+<virtual-directory-mapping>
+<local-path>C:/web/htdocs</local-path>
+<url-pattern>/css/*</url-pattern>
+<url-pattern>/fonts/*</url-pattern>
+<url-pattern>/ImgServer/*</url-pattern>
+<url-pattern>/js/*</url-pattern>
+<url-pattern>/scripts/*</url-pattern>
+</virtual-directory-mapping>
+   <weblogic-version>12.2.1.2</weblogic-version>
+</weblogic-web-app>

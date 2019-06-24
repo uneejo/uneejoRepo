@@ -1,0 +1,86 @@
+1.멤버리스트컨트롤러에서
+
+int pn=1;  //페이지넘버는 1이다.
+if(request.getParameter("pn")!=null) {      // pn가 넘어오면 널이 아니다.
+   pn=Integer.parseInt(request.getParameter("pn"));}     // 즉 pn가 넘어오면 그번호로 설정함
+int rs=2;   //로우사이즈는 2이다.
+if(request.getParameter("rs")!=null) {     //rs가 select태그에서 넘어옴, 그것이 널이아니면
+  rs=Integer.parseInt(request.getParameter("rs"));}  // 넘어온 번호로 셋팅
+
+
+ListForm list1=new ListForm(); 객체만들어주고
+	MemberServiceFacade sf=MemberServiceFacadeImpl.getInstance();
+	int dbc=sf.getDbcount();  //db행숫자구하고
+	list1.setPagenum(pn);   //현재페이지번호 셋팅(이동안해서 1임)
+	list1.setRowsize(rs);    //셀렉트에 2부터 만들거라서 초기 2로 설정
+	list1.setDbcount(dbc); //dbcount한거 셋팅
+	int startrow=list1.getStartrow();  //스타트로우구함
+                  int endrow=list1.getEndrow();    //마지막로우 구함.
+List<MemberBean> list=sf.getMemberList(startrow,endrow);
+list1.setList(list);	//스타트로우에서 마지막로우까지만 select member해온거
+
+
+2.list.jsp에서 얻어올거 얻어옴
+
+ListForm list=(ListForm)request.getAttribute("list");  //Listform 객체 받아옴.
+  List<MemberBean> li=(List<MemberBean>)list.getList(); //거기서 데이터 List가져옴
+  int pn=list.getPagenum(); //컨트롤러에서 셋팅했던 pn얻어옴.
+  int rs=list.getRowsize(); //rs얻어옴.
+  int dbc=list.getDbcount(); //dbcount얻어옴.
+  int startrow=list.getStartrow(); //시작로우 얻어옴
+  String id; 
+  int num=startrow; //num에 startrow셋팅함.->1. aa1 2.aa2 이런거 할때 num 사용할거임
+  int startpage=list.getStartpage(); //시작페이지 얻어옴
+  int endpage=list.getEndpage();  //엔드페이지 얻어옴.
+
+
+3. 데이터 list에서 아이디 뽑기
+for(MemberBean bean:li){     //Listform에 담겨있던 데이터 List값으로 id 얻어옴.
+	  id=bean.getId();
+%>
+
+<%=(num++)+"."%>&nbsp;<a href="/mvcTest77/member/detail.do?id=<%=id%>"><%=id%></a><br/>   //얻어온 id앞에 1. 2. 이런식으로 번호매기기
+
+<%} %>
+
+
+4. ◀ 클릭하면  pn-1해서 f  함수로 감.
+
+<% if(list.isPrevious()){  %> 
+
+<a href="#" onclick="f(<%=pn-1%>)">◀</a>
+
+<% } %>
+
+5. f함수가기전에 참고해야할 태그
+
+<form action="list.do">
+<input type="hidden" name="pn">    //form 0번자식
+<input type="hidden" name="rs">    //form 1번자식
+</form>
+
+<select id="sel" onchange=f(<%=pn%>)>
+<option>2</option>
+<option>4</option>
+<option>6</option>
+</select>
+
+6. f함수 
+ function f(num){   //num은 즉 pn임.
+	 document.forms[0].elements[0].value=num;  // pn=pn-1한거
+	 document.forms[0].elements[1].value=sel.value; // rs=select 태그에서 선택한거
+	 document.forms[0].submit();    // form태그 hidden되있던거 submit으로 바꿈
+	 }
+
+7. ◀ 클릭했으니깐 pn-1한상태로 form액션에 걸려있는 list.do 로가서 다시 컨트롤러감.
+
+8. 멤버리스트 컨트롤러에서 pn은 null이아니니깐  보낸아이로 셋팅되서 올거임
+
+9. 그런식으로 페이지변경??함.
+
+10.
+$(document).ready(function(){
+	 var r=<%=request.getParameter("rs")%>  // 로우사이즈를 select태그 선택한 아이로 셋팅
+	 $("#sel").val(r);              //처음 select태그에 나오는 번호를 셋팅한거로 나오게 하기
+	 
+ });
