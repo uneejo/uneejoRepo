@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<FDL version="1.5">
+  <TypeDefinition url="..\default_typedef.xml"/>
+  <Form id="companyInfoForm" classname="companyInfoForm" inheritanceid="" position="absolute 0 0 1024 768" titletext="New Form" onload="companyInfoForm_onload">
+    <Layouts>
+      <Layout>
+        <ImageViewer id="ImageViewer00" taborder="22" position2="absolute l:0 w:1021 t:0 h:766" positiontype="position2" image="URL('C:\Users\User\Desktop\company.png')" stretch="fit" onclick="ImageViewer00_onclick" enable="true"/>
+        <Static id="Static00" text="회사코드" position2="absolute l:60 w:100 t:101 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static01" text="회사명" position2="absolute l:60 w:100 t:138 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static02" text="회사구분" position2="absolute l:60 w:100 t:175 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static03" text="사업장등록번호" position2="absolute l:60 w:100 t:212 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static04" text="법인등록번호" position2="absolute l:60 w:100 t:249 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static05" text="대표자명" position2="absolute l:60 w:100 t:286 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static06" text="업태" position2="absolute l:60 w:100 t:323 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static07" text="종목" position2="absolute l:60 w:100 t:360 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static08" text="회사우편번호" position2="absolute l:60 w:100 t:397 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static09" text="회사기본주소" position2="absolute l:60 w:100 t:434 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static10" text="회사세부주소" position2="absolute l:60 w:100 t:471 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static11" text="회사전화번호" position2="absolute l:60 w:100 t:508 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static12" text="팩스번호" position2="absolute l:60 w:100 t:545 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static13" text="설립년월일" position2="absolute l:60 w:100 t:582 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Static id="Static14" text="개업년월일" position2="absolute l:60 w:100 t:619 h:35" positiontype="position2" style="background:lightyellow;color:cornflowerblue;"/>
+        <Edit id="companyCode" taborder="2" position2="absolute l:170 w:191 t:101 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyName" taborder="3" position2="absolute l:170 w:191 t:138 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyDivision" taborder="4" position2="absolute l:170 w:191 t:175 h:34" positiontype="position2" enable="false"/>
+        <Edit id="businessLicenseNumber" taborder="5" position2="absolute l:170 w:191 t:213 h:34" positiontype="position2" enable="false"/>
+        <Edit id="corporationLicenseNumber" taborder="6" position2="absolute l:170 w:191 t:250 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyCeoName" taborder="7" position2="absolute l:170 w:191 t:287 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyBusinessConditions" taborder="8" position2="absolute l:170 w:191 t:324 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyBusinessItems" taborder="9" position2="absolute l:170 w:191 t:360 h:34" positiontype="position2" enable="false" oneditclick="companyBusinessItems_oneditclick"/>
+        <Edit id="zipCode" taborder="10" position2="absolute l:170 w:191 t:397 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyBasicAddress" taborder="11" position2="absolute l:170 w:191 t:435 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyDetailAddress" taborder="12" position2="absolute l:170 w:191 t:472 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyTelNumber" taborder="13" position2="absolute l:170 w:191 t:509 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyFaxNumber" taborder="14" position2="absolute l:170 w:191 t:547 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyEstablishmentDate" taborder="15" position2="absolute l:169 w:191 t:585 h:34" positiontype="position2" enable="false"/>
+        <Edit id="companyOpenDate" taborder="16" position2="absolute l:169 w:191 t:623 h:34" positiontype="position2" enable="false"/>
+        <Button id="zipcodeSearch" taborder="17" text="검색" position2="absolute l:366 w:69 t:398 h:34" positiontype="position2" style="background:cornsilk;color:cornflowerblue;"/>
+        <Button id="companyRegistrationBtn" taborder="18" text="회사등록" position2="absolute l:64 w:75 t:673 h:32" positiontype="position2" style="background:gray;" onclick="companyRegistrationBtn_onclick"/>
+        <Button id="updateBtn" taborder="19" text="수정" position2="absolute l:165 w:75 t:673 h:32" positiontype="position2" style="background:gray;" onclick="updateBtn_onclick"/>
+        <Button id="cancleBtn" taborder="20" text="취소" position2="absolute l:269 w:75 t:673 h:32" positiontype="position2" style="background:gray;" onclick="cancleBtn_onclick"/>
+        <Button id="batchSaveBtn" taborder="21" text="저장" position2="absolute l:376 w:75 t:672 h:32" positiontype="position2" style="background:gray;" onclick="batchSaveBtn_onclick"/>
+        <Static id="Static15" text="회사정보등록" position2="absolute l:19 w:983 t:16 h:45" positiontype="position2" style="background:lightyellow;color:cornflowerblue;font:맑은 고딕,12,bold;"/>
+      </Layout>
+    </Layouts>
+    <Bind>
+      <BindItem id="item0" compid="companyCode" propid="value" datasetid="ds_company" columnid="COMPANY_CODE"/>
+      <BindItem id="item1" compid="companyName" propid="value" datasetid="ds_company" columnid="COMPANY_NAME"/>
+      <BindItem id="item2" compid="businessLicenseNumber" propid="value" datasetid="ds_company" columnid="BUSINESS_LICENSE_NUMBER"/>
+      <BindItem id="item3" compid="corporationLicenseNumber" propid="value" datasetid="ds_company" columnid="CORPORATION_LICENSE_NUMBER"/>
+      <BindItem id="item4" compid="companyDivision" propid="value" datasetid="ds_company" columnid="COMPANY_DIVISION"/>
+      <BindItem id="item5" compid="companyCeoName" propid="value" datasetid="ds_company" columnid="COMPANY_CEO_NAME"/>
+      <BindItem id="item6" compid="companyBusinessConditions" propid="value" datasetid="ds_company" columnid="COMPANY_BUSINESS_CONDITIONS"/>
+      <BindItem id="item7" compid="companyBusinessItems" propid="value" datasetid="ds_company" columnid="COMPANY_BUSINESS_ITEMS"/>
+      <BindItem id="item8" compid="zipCode" propid="value" datasetid="ds_company" columnid="COMPANY_ZIP_CODE"/>
+      <BindItem id="item9" compid="companyBasicAddress" propid="value" datasetid="ds_company" columnid="COMPANY_BASIC_ADDRESS"/>
+      <BindItem id="item10" compid="companyDetailAddress" propid="value" datasetid="ds_company" columnid="COMPANY_DETAIL_ADDRESS"/>
+      <BindItem id="item11" compid="companyTelNumber" propid="value" datasetid="ds_company" columnid="COMPANY_TEL_NUMBER"/>
+      <BindItem id="item12" compid="companyFaxNumber" propid="value" datasetid="ds_company" columnid="COMPANY_FAX_NUMBER"/>
+      <BindItem id="item13" compid="companyEstablishmentDate" propid="value" datasetid="ds_company" columnid="COMPANY_ESTABLISHMENT_DATE"/>
+      <BindItem id="item14" compid="companyOpenDate" propid="value" datasetid="ds_company" columnid="COMPANY_OPEN_DATE"/>
+    </Bind>
+    <Script type="xscript4.0"><![CDATA[
+function companyInfoForm_onload(obj:Form, e:LoadEventInfo)
+{
+	transaction("findCompany","svcBase::findCompany.do","","ds_company=dsCompany","","callback",false);
+}
+
+function companyRegistrationBtn_onclick(obj:Button,  e:ClickEventInfo)
+{
+	if(ds_company.getRowCount()>0){
+	alert("회사정보가 이미 등록되어 있습니다.");
+	}
+	else
+	{
+	   if(confirm("회사정보를 등록하시겠습니까?"))
+	   {    
+	        	dialog("companyRegistrationDialog",
+				"Base::companyRegistrationDialog.xfdl", 
+				//MainFrame, //굳이 부모 설정 안넣어도 될 듯 ??
+				"",
+				{},
+				"showtitlebar=true showstatusbar=false openalign='center middle' showcascadetitletext=false titletext='companyRegistrationDialog'",
+				"", "", "", "",this);	 
+	   
+	   }
+	   
+	}
+}
+
+function updateBtn_onclick(obj:Button,  e:ClickEventInfo)
+{   
+
+      if(ds_company.getRowCount()==0)
+        {
+           alert("수정할 회사정보가 없습니다.");
+         }
+       else{
+		companyDivision.enable=true;
+		businessLicenseNumber.enable=true;
+		corporationLicenseNumber.enable=true;
+		companyCeoName.enable=true;
+		companyBusinessConditions.enable=true;
+		companyBusinessItems.enable=true;
+		zipCode.enable=true;
+		companyBasicAddress.enable=true;
+		companyDetailAddress.enable=true;
+		companyTelNumber.enable=true;
+		companyFaxNumber.enable=true;
+		companyOpenDate.enable=true;
+		companyEstablishmentDate.enable=true;
+	   }
+	
+}
+
+function cancleBtn_onclick(obj:Button,  e:ClickEventInfo)
+{
+	reload();
+}
+
+
+
+function batchSaveBtn_onclick(obj:Button,  e:ClickEventInfo)
+{
+	  if(confirm("변경사항을 저장하시겠습니까?"))
+	transaction("batchCompany","svcBase::batchCompany.do","dsCompany=ds_company","ds_company=dsCompany","","callback",false);
+}
+
+
+
+function callback(trid, ErrorCode, ErrorMsg){
+if(trid=='batchCompany'){
+		if(ErrorCode<0){
+			alert("회사정보 일괄저장 중 오류 발생");
+		}else{
+			alert("회사정보 저장완료");
+			reload();
+		}	
+	}
+
+}
+
+]]></Script>
+  </Form>
+</FDL>
