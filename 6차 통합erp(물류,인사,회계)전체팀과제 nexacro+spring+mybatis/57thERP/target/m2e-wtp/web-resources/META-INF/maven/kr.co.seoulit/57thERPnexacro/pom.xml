@@ -428,7 +428,7 @@
 		<dependency>
 			<groupId>org.mybatis</groupId>
 			<artifactId>mybatis</artifactId>
-			<version>3.4.6</version>
+			<version>3.5.6</version>
 		</dependency>
 
 		<!-- WEB-INF/lib/ 폴더에 있는 iTextAsian.jar 등 다음의 4개 파일은 메이븐에서 지원하지 않으므로 로컬
