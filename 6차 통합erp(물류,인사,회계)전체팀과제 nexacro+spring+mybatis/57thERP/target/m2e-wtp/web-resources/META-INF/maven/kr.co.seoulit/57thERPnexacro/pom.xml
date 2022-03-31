@@ -17,7 +17,7 @@
 		<!-- MappingJackson2JsonView 사용시 스프링 버전을 3.1.2 이상 설정 -->
 		<!-- RequsetMappingHandlerMapping 등 사용시 스프링 버전을 3.1 이상 설정 -->
 		<!-- 웹로직 연동시 스프링 버전을 변경해야 할 수도 있음 : 구글링 검색 -->
-		<org.springframework-version>3.2.16.RELEASE</org.springframework-version>
+		<org.springframework-version>5.3.18</org.springframework-version>
 
 		<!-- AOP 기능을 지원하는 aspectj , 로깅 인터페이스 라이브러리인 slf4j 버전 설정 -->
 		<org.aspectj-version>1.9.1</org.aspectj-version>
